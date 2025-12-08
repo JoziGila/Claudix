@@ -74,6 +74,11 @@ html {
   --app-link-color: var(--vscode-textLink-foreground);
 }
 
+body {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
 /* Light 主题调整 */
 .vscode-light {
   --app-transparent-inner-border: rgba(0, 0, 0, 0.07);
