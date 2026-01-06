@@ -5,26 +5,32 @@
   >
     <template #custom>
       <div class="plan-card">
-        <!-- Plan 标题栏 -->
+        <!-- Plan header -->
         <div class="plan-header">
           <span class="codicon codicon-tasklist"></span>
           <span class="plan-title">Plan</span>
         </div>
 
-        <!-- Plan 内容 -->
+        <!-- Plan content -->
         <div v-if="plan" class="plan-body" :class="{ 'is-expanded': isExpanded }">
-          <div class="plan-content" v-html="renderedPlan"></div>
+          <div class="plan-content">
+            <MarkdownRender
+              :content="plan"
+              :enable-mermaid="true"
+              :is-dark="isDark"
+            />
+          </div>
         </div>
 
-        <!-- 展开按钮 -->
+        <!-- Expand button -->
         <div v-if="plan && !toolResult?.is_error" class="plan-footer">
           <button @click="toggleExpand" class="expand-button">
             <span class="codicon" :class="isExpanded ? 'codicon-chevron-up' : 'codicon-chevron-down'"></span>
-            <span>{{ isExpanded ? '收起' : '展开' }}</span>
+            <span>{{ isExpanded ? 'Collapse' : 'Expand' }}</span>
           </button>
         </div>
 
-        <!-- 错误内容 -->
+        <!-- Error content -->
         <ToolError v-if="toolResult?.is_error" :tool-result="toolResult" />
       </div>
     </template>
@@ -33,9 +39,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { marked } from 'marked';
+import { MarkdownRender } from 'markstream-vue';
 import ToolMessageWrapper from './common/ToolMessageWrapper.vue';
 import ToolError from './common/ToolError.vue';
+import { useThemeDetector } from '../../../../utils/themeDetector';
 
 interface Props {
   toolUse?: any;
@@ -45,21 +52,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// 展开状态
+const { isDark } = useThemeDetector();
+
+// Expand state
 const isExpanded = ref(false);
 
-// Plan内容
+// Plan content
 const plan = computed(() => {
   return props.toolUse?.input?.plan || props.toolUseResult?.plan;
 });
 
-// 使用marked渲染Markdown
-const renderedPlan = computed(() => {
-  if (!plan.value) return '';
-  return marked(plan.value);
-});
-
-// 切换展开/收起
+// Toggle expand/collapse
 const toggleExpand = () => {
   isExpanded.value = !isExpanded.value;
 };
@@ -124,7 +127,7 @@ const toggleExpand = () => {
   color: var(--vscode-editor-foreground);
 }
 
-/* Markdown 样式 */
+/* Markdown styles */
 .plan-content :deep(h1) {
   font-size: 1.4em;
   font-weight: 600;
@@ -189,7 +192,7 @@ const toggleExpand = () => {
   padding: 0;
 }
 
-/* 展开按钮 */
+/* Expand button */
 .plan-footer {
   display: flex;
   justify-content: center;
