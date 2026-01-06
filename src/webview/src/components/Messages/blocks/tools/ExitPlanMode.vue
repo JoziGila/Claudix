@@ -14,11 +14,7 @@
         <!-- Plan content -->
         <div v-if="plan" class="plan-body" :class="{ 'is-expanded': isExpanded }">
           <div class="plan-content">
-            <MarkdownRender
-              :content="plan"
-              :enable-mermaid="true"
-              :is-dark="isDark"
-            />
+            <MarkdownContent :content="plan" />
           </div>
         </div>
 
@@ -39,10 +35,9 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { MarkdownRender } from 'markstream-vue';
+import MarkdownContent from '../../MarkdownContent.vue';
 import ToolMessageWrapper from './common/ToolMessageWrapper.vue';
 import ToolError from './common/ToolError.vue';
-import { useThemeDetector } from '../../../../utils/themeDetector';
 
 interface Props {
   toolUse?: any;
@@ -51,8 +46,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
-const { isDark } = useThemeDetector();
 
 // Expand state
 const isExpanded = ref(false);

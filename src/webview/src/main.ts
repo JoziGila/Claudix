@@ -2,7 +2,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import { enableMermaid, setCustomComponents } from 'markstream-vue';
 import App from './App.vue';
-import MermaidDiagram from './components/MermaidDiagram.vue';
+import MermaidDiagram from './components/Messages/MermaidDiagram.vue';
 import '@vscode/codicons/dist/codicon.css';
 import '@mdi/font/css/materialdesignicons.min.css';
 import 'markstream-vue/index.css';

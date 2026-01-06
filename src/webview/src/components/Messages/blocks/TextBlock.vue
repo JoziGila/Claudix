@@ -1,21 +1,16 @@
 <template>
   <div class="text-block">
     <div :class="markdownClasses">
-      <MarkdownRender
-        :content="props.block.text"
-        :enable-mermaid="true"
-        :is-dark="isDark"
-      />
+      <MarkdownContent :content="props.block.text" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { MarkdownRender } from 'markstream-vue';
+import MarkdownContent from '../MarkdownContent.vue';
 import type { TextBlock as TextBlockType } from '../../../models/ContentBlock';
 import type { ToolContext } from '../../../types/tool';
-import { useThemeDetector } from '../../../utils/themeDetector';
 
 interface Props {
   block: TextBlockType;
@@ -23,8 +18,6 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-
-const { isDark } = useThemeDetector();
 
 // Markdown class names
 const markdownClasses = computed(() => {

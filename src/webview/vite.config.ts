@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: Number(process.env.VITE_DEV_PORT) || 5173,
     strictPort: true,
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+    },
     fs: {
       // 允许从工作区根目录及外部资源目录读取文件（用于别名资源与图标目录）
       allow: [
