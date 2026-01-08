@@ -82,9 +82,14 @@ export default defineConfig(({ mode }) => ({
       // 使用本地的 codicon 资源替换依赖包中的资源
       '@vscode/codicons/dist/codicon.css': path.resolve(__dirname, '../../assets/codicons/codicon.css'),
       '@vscode/codicons/dist/codicon.ttf': path.resolve(__dirname, '../../assets/codicons/codicon.ttf'),
+      // Force mermaid to use pre-built ESM bundle (fixes dynamic import issues in webview)
+      'mermaid': path.resolve(__dirname, '../../node_modules/mermaid/dist/mermaid.esm.min.mjs'),
     },
   },
   base: '',
+  optimizeDeps: {
+    include: ['mermaid'],
+  },
   build: {
     outDir: path.resolve(__dirname, '../../dist/media'),
     emptyOutDir: true,

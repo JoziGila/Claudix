@@ -1,23 +1,36 @@
 <template>
   <div class="text-block">
     <div :class="markdownClasses">
-      <MarkdownContent :content="props.block.text" />
+      <MarkdownContent :content="displayText" :final="!isStreaming" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useSignal } from '@gn8/alien-signals-vue';
 import MarkdownContent from '../MarkdownContent.vue';
 import type { TextBlock as TextBlockType } from '../../../models/ContentBlock';
+import type { ContentBlockWrapper } from '../../../models/ContentBlockWrapper';
 import type { ToolContext } from '../../../types/tool';
 
 interface Props {
   block: TextBlockType;
   context?: ToolContext;
+  wrapper?: ContentBlockWrapper;
 }
 
 const props = defineProps<Props>();
+
+// Streaming state - reactively consumed via useSignal (consistent pattern)
+const isStreaming = props.wrapper
+  ? useSignal(props.wrapper.isStreaming)
+  : computed(() => false);
+
+// Display text - reactively consumed via useSignal (follows toolResult pattern)
+const displayText = props.wrapper
+  ? useSignal(props.wrapper.text)
+  : computed(() => props.block.text ?? '');
 
 // Markdown class names
 const markdownClasses = computed(() => {

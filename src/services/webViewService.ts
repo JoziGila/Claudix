@@ -264,7 +264,7 @@ export class WebViewService implements IWebViewService {
 			`img-src ${webview.cspSource} https: data:;`,
 			`style-src ${webview.cspSource} 'unsafe-inline' https://*.vscode-cdn.net;`,
 			`font-src ${webview.cspSource} data:;`,
-			`script-src ${webview.cspSource} 'nonce-${nonce}';`,
+			`script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' blob:;`,
 			`connect-src ${webview.cspSource} https:;`,
 			`worker-src ${webview.cspSource} blob:;`,
 		].join(' ');
@@ -315,7 +315,7 @@ export class WebViewService implements IWebViewService {
 			`img-src ${webview.cspSource} https: data:;`,
 			`style-src ${webview.cspSource} 'unsafe-inline' ${origin} https://*.vscode-cdn.net;`,
 			`font-src ${webview.cspSource} data: ${origin};`,
-			`script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' ${origin};`,
+			`script-src ${webview.cspSource} 'nonce-${nonce}' 'unsafe-eval' ${origin} blob:;`,
 			`connect-src ${webview.cspSource} ${origin} ${wsUrl} https:;`,
 			`worker-src ${webview.cspSource} blob:;`,
 		].join(' ');
