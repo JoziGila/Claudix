@@ -49,6 +49,14 @@ export interface IWebViewService extends vscode.WebviewViewProvider {
 	 * @param instanceId 页面实例 ID，用于区分多标签（不传则默认为 page，实现单例）
 	 */
 	openEditorPage(page: string, title: string, instanceId?: string): void;
+
+	/**
+	 * Update editor panel title (editor panels only)
+	 *
+	 * @param instanceId Panel instance ID
+	 * @param title New title (will be truncated to 40 chars)
+	 */
+	updatePanelTitle(instanceId: string, title: string): void;
 }
 
 /**
@@ -208,6 +216,21 @@ export class WebViewService implements IWebViewService {
 		);
 
 		this.editorPanels.set(key, panel);
+	}
+
+	/**
+	 * Update editor panel title
+	 */
+	updatePanelTitle(instanceId: string, title: string): void {
+		const panel = this.editorPanels.get(instanceId);
+		if (!panel) {
+			return;
+		}
+
+		// Clean and truncate title
+		const cleaned = title.replace(/\s+/g, ' ').trim();
+		const truncated = cleaned.length > 40 ? cleaned.slice(0, 40) + '…' : cleaned;
+		panel.title = truncated || 'Claudix Chat';
 	}
 
 	/**

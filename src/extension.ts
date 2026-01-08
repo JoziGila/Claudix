@@ -50,6 +50,10 @@ export function activate(context: vscode.ExtensionContext) {
 
 		// Connect WebView messages to Claude Agent Service
 		webViewService.setMessageHandler((message) => {
+			// Update editor panel title if message includes panelTitle and instanceId
+			if (message.panelTitle && message.instanceId) {
+				webViewService.updatePanelTitle(message.instanceId, message.panelTitle);
+			}
 			claudeAgentService.fromClient(message);
 		});
 
