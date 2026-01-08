@@ -219,7 +219,7 @@ export class Message {
 
     const content = this.message.content;
 
-    // String content is not empty if has length
+    // String content is empty if zero length
     if (typeof content === 'string') {
       return content.length === 0;
     }

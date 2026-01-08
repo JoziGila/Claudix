@@ -186,11 +186,27 @@ export class StreamingController {
 
   /**
    * Cancel an active stream
+   *
+   * Updates message state to match handleTimeout/handleError behavior
+   * so the UI correctly reflects the cancelled state.
    */
   cancel(parentToolUseId: string | null = null): void {
     const context = this.activeStreams.get(parentToolUseId);
     if (!context) {
       return;
+    }
+
+    // Finalize any active wrappers
+    for (const wrapper of context.wrappers.values()) {
+      if (wrapper.getIsStreaming()) {
+        wrapper.finalizeStreaming();
+      }
+    }
+
+    // Update message state (mirror handleTimeout/handleError)
+    if (context.message) {
+      context.message.markInterrupted();
+      context.message.setStreaming(false);
     }
 
     this.disposeStreamContext(context);
@@ -280,8 +296,20 @@ export class StreamingController {
       return;
     }
 
-    // Extract text from delta and append to wrapper
-    const text = delta.text ?? delta.thinking ?? delta.partial_json ?? '';
+    // Extract text from delta based on delta type
+    // SDK delta types: text_delta, thinking_delta, input_json_delta
+    let text = '';
+    if (delta.type === 'text_delta' && delta.text) {
+      text = delta.text;
+    } else if (delta.type === 'thinking_delta' && delta.thinking) {
+      text = delta.thinking;
+    } else if (delta.type === 'input_json_delta' && delta.partial_json !== undefined) {
+      // partial_json may be string or object - serialize if needed
+      text = typeof delta.partial_json === 'string'
+        ? delta.partial_json
+        : JSON.stringify(delta.partial_json);
+    }
+
     if (text) {
       wrapper.appendDelta(text);
     }
