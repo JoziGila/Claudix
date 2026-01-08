@@ -79,6 +79,22 @@ export function activate(context: vscode.ExtensionContext) {
 			})
 		);
 
+		context.subscriptions.push(
+			vscode.commands.registerCommand('claudix.openChatInEditor', () => {
+				instantiationService.invokeFunction(accessorInner => {
+					const webViewServiceInner = accessorInner.get(IWebViewService);
+					const logServiceInner = accessorInner.get(ILogService);
+					try {
+						const instanceId = `chat-${Date.now()}`;
+						webViewServiceInner.openEditorPage('chat', 'Claudix Chat', instanceId);
+						logServiceInner.info(`[Command] Opened chat in editor: ${instanceId}`);
+					} catch (error) {
+						logServiceInner.error('[Command] Failed to open chat in editor', error);
+					}
+				});
+			})
+		);
+
 		logService.info('✓ Claude Agent Service 已连接 Transport');
 		logService.info('✓ WebView Service 已注册为 View Provider');
 		logService.info('✓ Settings 命令已注册');

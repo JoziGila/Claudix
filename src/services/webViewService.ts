@@ -109,8 +109,8 @@ export class WebViewService implements IWebViewService {
 	 * 广播消息到所有已注册的 WebView
 	 */
 	postMessage(message: any): void {
-		// 目前 ClaudeAgentService 只需要与侧边栏聊天视图通信
-		// 因此这里只向 host === 'sidebar' 且 page === 'chat' 的 WebView 发送消息
+		// 向所有 page === 'chat' 的 WebView 发送消息（包括侧边栏和编辑器面板）
+		// 每个 WebView 会根据 channelId 过滤自己需要的消息
 		if (this.webviews.size === 0) {
 			this.logService.warn('[WebViewService] 当前没有可用的 WebView 实例，消息将被丢弃');
 			return;
@@ -125,7 +125,7 @@ export class WebViewService implements IWebViewService {
 
 		for (const webview of this.webviews) {
 			const config = this.webviewConfigs.get(webview);
-			if (!config || config.host !== 'sidebar' || (config.page && config.page !== 'chat')) {
+			if (!config || config.page !== 'chat') {
 				continue;
 			}
 
