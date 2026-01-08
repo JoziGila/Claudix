@@ -187,6 +187,9 @@ export class WebViewService implements IWebViewService {
 			}
 		);
 
+		// Set panel icon (same as sidebar for consistency)
+		panel.iconPath = vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'claude-logo.svg'));
+
 		this.registerWebview(panel.webview, {
 			host: 'editor',
 			page,
