@@ -1,17 +1,17 @@
 /**
  * useSession - Vue Composable for Session
  *
- * 核心功能：
- * 1. 将 Session 类的 alien-signals 转换为 Vue refs
- * 2. 将 alien computed 转换为 Vue computed
- * 3. 提供 Vue-friendly 的 API
+ * Core features:
+ * 1. Convert Session class alien-signals to Vue refs
+ * 2. Convert alien computed to Vue computed
+ * 3. Provide Vue-friendly API
  *
- * 使用方法：
+ * Usage:
  * ```typescript
  * const session = new Session(...);
  * const sessionAPI = useSession(session);
- * // sessionAPI.messages 是 Vue Ref<any[]>
- * // sessionAPI.busy 是 Vue Ref<boolean>
+ * // sessionAPI.messages is Vue Ref<any[]>
+ * // sessionAPI.busy is Vue Ref<boolean>
  * ```
  */
 
@@ -25,10 +25,10 @@ import type { BaseTransport } from '../transport/BaseTransport';
 import type { ModelOption } from '../../../shared/messages';
 
 /**
- * useSession 返回类型
+ * useSession return type
  */
 export interface UseSessionReturn {
-  // 基础状态
+  // Basic state
   connection: Ref<BaseTransport | undefined>;
   busy: Ref<boolean>;
   isLoading: Ref<boolean>;
@@ -37,7 +37,7 @@ export interface UseSessionReturn {
   isExplicit: Ref<boolean>;
   lastModifiedTime: Ref<number>;
 
-  // 核心数据
+  // Core data
   messages: Ref<any[]>;
   messageCount: Ref<number>;
   cwd: Ref<string | undefined>;
@@ -49,22 +49,22 @@ export interface UseSessionReturn {
   worktree: Ref<{ name: string; path: string } | undefined>;
   selection: Ref<SelectionRange | undefined>;
 
-  // 使用统计
+  // Usage statistics
   usageData: Ref<{
     totalTokens: number;
     totalCost: number;
     contextWindow: number;
   }>;
 
-  // 计算属性
+  // Computed properties
   claudeConfig: ComputedRef<any>;
   config: ComputedRef<any>;
   permissionRequests: ComputedRef<PermissionRequest[]>;
 
-  // 派生状态
+  // Derived state
   isOffline: ComputedRef<boolean>;
 
-  // 方法
+  // Methods
   getConnection: () => Promise<BaseTransport>;
   preloadConnection: () => Promise<void>;
   loadFromServer: () => Promise<void>;
@@ -85,18 +85,18 @@ export interface UseSessionReturn {
   onPermissionRequested: (callback: (request: PermissionRequest) => void) => () => void;
   dispose: () => void;
 
-  // 原始实例（用于高级场景）
+  // Raw instance (for advanced scenarios)
   __session: Session;
 }
 
 /**
- * useSession - 将 Session 实例包装为 Vue Composable API
+ * useSession - Wrap Session instance as Vue Composable API
  *
- * @param session Session 实例
+ * @param session Session instance
  * @returns Vue-friendly API
  */
 export function useSession(session: Session): UseSessionReturn {
-  //  使用官方 useSignal 桥接 signals/computed
+  // Use official useSignal to bridge signals/computed
   const connection = useSignal(session.connection);
   const busy = useSignal(session.busy);
   const isLoading = useSignal(session.isLoading);
@@ -116,15 +116,15 @@ export function useSession(session: Session): UseSessionReturn {
   const selection = useSignal(session.selection);
   const usageData = useSignal(session.usageData);
 
-  //  使用 useSignal 包装 alien computed（读-only 使用，不调用 setter）
+  // Use useSignal to wrap alien computed (read-only usage, no setter calls)
   const claudeConfig = useSignal(session.claudeConfig as any);
   const config = useSignal(session.config as any);
   const permissionRequests = useSignal(session.permissionRequests) as unknown as ComputedRef<PermissionRequest[]>;
 
-  //  派生状态（临时保留 Vue computed）
+  // Derived state (temporarily keeping Vue computed)
   const isOffline = computed(() => session.isOffline());
 
-  //  绑定所有方法（确保 this 指向正确）
+  // Bind all methods (ensure correct 'this' context)
   const getConnection = session.getConnection.bind(session);
   const preloadConnection = session.preloadConnection.bind(session);
   const loadFromServer = session.loadFromServer.bind(session);
@@ -142,7 +142,7 @@ export function useSession(session: Session): UseSessionReturn {
   const dispose = session.dispose.bind(session);
 
   return {
-    // 状态
+    // State
     connection,
     busy,
     isLoading,
@@ -162,13 +162,13 @@ export function useSession(session: Session): UseSessionReturn {
     selection,
     usageData,
 
-    // 计算属性
+    // Computed properties
     claudeConfig,
     config,
     permissionRequests,
     isOffline,
 
-    // 方法
+    // Methods
     getConnection,
     preloadConnection,
     loadFromServer,
@@ -185,7 +185,7 @@ export function useSession(session: Session): UseSessionReturn {
     onPermissionRequested,
     dispose,
 
-    // 原始实例
+    // Raw instance
     __session: session,
   };
 }

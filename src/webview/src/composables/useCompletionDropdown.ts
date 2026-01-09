@@ -10,17 +10,17 @@ import { useTriggerDetection } from './useTriggerDetection'
 import { useKeyboardNavigation } from './useKeyboardNavigation'
 
 /**
- * 通用补全 Dropdown Composable
+ * Generic Completion Dropdown Composable
  *
- * 封装完整的补全下拉逻辑，支持两种模式：
- * - inline: 输入触发（如 /command, @file）
- * - manual: 手动触发（如按钮点击）
+ * Encapsulates complete dropdown completion logic, supporting two modes:
+ * - inline: Input triggered (e.g., /command, @file)
+ * - manual: Manually triggered (e.g., button click)
  *
- * @param config 补全配置
- * @returns 补全 dropdown 状态和方法
+ * @param config Completion configuration
+ * @returns Completion dropdown state and methods
  *
  * @example
- * // inline 模式
+ * // inline mode
  * const slashCompletion = useCompletionDropdown({
  *   mode: 'inline',
  *   trigger: '/',
@@ -31,7 +31,7 @@ import { useKeyboardNavigation } from './useKeyboardNavigation'
  * })
  *
  * @example
- * // manual 模式
+ * // manual mode
  * const commandMenu = useCompletionDropdown({
  *   mode: 'manual',
  *   provider: getCommands,
@@ -54,25 +54,25 @@ export function useCompletionDropdown<T>(
     sectionOrder = []
   } = config
 
-  // 验证配置
+  // Validate configuration
   if (mode === 'inline' && !trigger) {
-    throw new Error('[useCompletionDropdown] inline 模式必须提供 trigger 参数')
+    throw new Error('[useCompletionDropdown] inline mode requires trigger parameter')
   }
 
-  // === 状态管理 ===
+  // === State management ===
   const isOpen = ref(false)
   const activeIndex = ref(0)
   const query = ref('')
   const triggerQuery = ref<TriggerQuery | undefined>(undefined)
   const rawItems = ref<T[]>([])
-  const navigationMode = ref<'keyboard' | 'mouse'>('keyboard') // 导航模式
+  const navigationMode = ref<'keyboard' | 'mouse'>('keyboard') // Navigation mode
 
-  // === 触发检测（inline 模式） ===
+  // === Trigger detection (inline mode) ===
   const triggerDetection = mode === 'inline' && trigger
     ? useTriggerDetection({ trigger })
     : null
 
-  // === 数据加载（序列化 + 竞态防护 + 防抖 + AbortController） ===
+  // === Data loading (serialization + race condition protection + debounce + AbortController) ===
   const requestSeq = ref(0)
   const isLoading = ref(false)
   let debounceTimerId: number | undefined
@@ -80,58 +80,58 @@ export function useCompletionDropdown<T>(
 
   async function loadItems(searchQuery: string, signal?: AbortSignal) {
     try {
-      // 自增请求号，仅允许最新请求写入
+      // Increment request number, only allow latest request to write
       const seq = ++requestSeq.value
       isLoading.value = true
 
       const result = provider(searchQuery, signal)
       const data = result instanceof Promise ? await result : result
 
-      // 只采纳最新请求
+      // Only accept latest request
       if (seq === requestSeq.value) {
         rawItems.value = (data ?? []) as T[]
       }
     } catch (error) {
-      // 如果是 AbortError,静默处理
+      // If AbortError, handle silently
       if (error instanceof Error && error.name === 'AbortError') {
         return
       }
-      console.error('[useCompletionDropdown] 加载数据失败:', error)
+      console.error('[useCompletionDropdown] Failed to load data:', error)
       rawItems.value = []
     } finally {
       isLoading.value = false
     }
   }
 
-  // 防抖加载（inline 模式专用，200ms 延迟 + AbortController 支持）
+  // Debounced loading (inline mode only, 200ms delay + AbortController support)
   function loadItemsDebounced(searchQuery: string, delay = 200) {
-    // 清除之前的防抖计时器
+    // Clear previous debounce timer
     if (debounceTimerId !== undefined) {
       window.clearTimeout(debounceTimerId)
     }
 
-    // 中止之前的请求
+    // Abort previous request
     if (currentAbortController) {
       currentAbortController.abort()
       currentAbortController = undefined
     }
 
     debounceTimerId = window.setTimeout(() => {
-      // 创建新的 AbortController
+      // Create new AbortController
       currentAbortController = new AbortController()
       void loadItems(searchQuery, currentAbortController.signal)
     }, delay)
   }
 
-  // === 项列表处理 ===
+  // === Item list processing ===
   const items = computed<DropdownItemType[]>(() => {
     if (rawItems.value.length === 0) return []
 
-    // 转换为 DropdownItem 格式
+    // Convert to DropdownItem format
     const source = (rawItems.value as unknown as T[]) || []
     let dropdownItems = source.map((it) => toDropdownItem(it as T))
 
-    // manual 模式：处理分组
+    // manual mode: process grouping
     if (mode === 'manual' && showSectionHeaders) {
       dropdownItems = organizeItemsWithSections(dropdownItems)
     }
@@ -139,14 +139,14 @@ export function useCompletionDropdown<T>(
     return dropdownItems
   })
 
-  // 组织项为分组格式
+  // Organize items into grouped format
   function organizeItemsWithSections(items: DropdownItemType[]): DropdownItemType[] {
     if (!showSectionHeaders) return items
 
     const result: DropdownItemType[] = []
     const grouped = new Map<string, DropdownItemType[]>()
 
-    // 按 section 分组
+    // Group by section
     for (const item of items) {
       const section = (item as any).section || 'Other'
       if (!grouped.has(section)) {
@@ -155,7 +155,7 @@ export function useCompletionDropdown<T>(
       grouped.get(section)!.push(item)
     }
 
-    // 按指定顺序输出
+    // Output in specified order
     const sections = sectionOrder.length > 0
       ? sectionOrder
       : Array.from(grouped.keys())
@@ -164,7 +164,7 @@ export function useCompletionDropdown<T>(
       const sectionItems = grouped.get(section)
       if (!sectionItems || sectionItems.length === 0) continue
 
-      // 添加分隔符（除第一个）
+      // Add separator (except first)
       if (result.length > 0) {
         result.push({
           id: `separator-${section}`,
@@ -172,33 +172,33 @@ export function useCompletionDropdown<T>(
         } as DropdownItemType)
       }
 
-      // 添加分组标题
+      // Add section header
       result.push({
         id: `section-${section}`,
         type: 'section-header',
         text: section
       } as DropdownItemType)
 
-      // 添加项
+      // Add items
       result.push(...sectionItems)
     }
 
     return result
   }
 
-  // 可导航的项（排除分隔符和标题）
+  // Navigable items (excluding separators and headers)
   const navigableItems = computed<T[]>(() => rawItems.value as unknown as T[])
 
-  // === 位置计算 ===
+  // === Position calculation ===
   const positionRef = ref<DropdownPosition>({ top: 0, left: 0, width: 0, height: 0 })
   const position = computed<DropdownPosition>(() => positionRef.value)
 
-  // 更新位置（可由外部调用）
+  // Update position (can be called externally)
   function updatePosition(pos: DropdownPosition) {
     positionRef.value = pos
   }
 
-  // 默认位置更新（基于 anchorElement）
+  // Default position update (based on anchorElement)
   function updateDefaultPosition() {
     if (!anchorElement?.value) {
       positionRef.value = { top: 0, left: 0, width: 0, height: 0 }
@@ -214,7 +214,7 @@ export function useCompletionDropdown<T>(
     }
   }
 
-  // === 键盘导航 ===
+  // === Keyboard navigation ===
   const navigation = useKeyboardNavigation({
     isOpen,
     items: computed(() => navigableItems.value),
@@ -228,18 +228,18 @@ export function useCompletionDropdown<T>(
     },
     onClose: close,
     supportTab: true,
-    supportEscape: mode === 'inline', // inline 模式支持 Escape
+    supportEscape: mode === 'inline', // inline mode supports Escape
     onNavigate: () => {
-      // 键盘导航时切换为 keyboard 模式
+      // Switch to keyboard mode during keyboard navigation
       navigationMode.value = 'keyboard'
     }
   })
 
-  // === inline 模式：查询评估 ===
+  // === inline mode: query evaluation ===
   function evaluateQuery(text: string, caretOffset?: number) {
     if (mode !== 'inline' || !triggerDetection) return
 
-    // 获取光标位置
+    // Get cursor position
     const caret = caretOffset ?? triggerDetection.getCaretOffset(anchorElement?.value || null)
     if (caret === undefined) {
       triggerQuery.value = undefined
@@ -247,7 +247,7 @@ export function useCompletionDropdown<T>(
       return
     }
 
-    // 查找触发查询
+    // Find trigger query
     const foundQuery = triggerDetection.findQuery(text, caret)
     triggerQuery.value = foundQuery
 
@@ -255,14 +255,14 @@ export function useCompletionDropdown<T>(
       query.value = foundQuery.query
       isOpen.value = true
       activeIndex.value = 0
-      // 使用防抖加载,避免频繁请求（200ms 延迟）
+      // Use debounced loading to avoid frequent requests (200ms delay)
       loadItemsDebounced(foundQuery.query)
     } else {
       isOpen.value = false
     }
   }
 
-  // === inline 模式：文本替换 ===
+  // === inline mode: text replacement ===
   function replaceText(text: string, replacement: string): string {
     if (mode !== 'inline' || !triggerDetection || !triggerQuery.value) {
       return text
@@ -271,7 +271,7 @@ export function useCompletionDropdown<T>(
     return triggerDetection.replaceRange(text, triggerQuery.value, replacement)
   }
 
-  // === manual 模式：打开/关闭 ===
+  // === manual mode: open/close ===
   function open() {
     isOpen.value = true
     activeIndex.value = 0
@@ -281,25 +281,25 @@ export function useCompletionDropdown<T>(
 
   function close() {
     isOpen.value = false
-    activeIndex.value = -1 // 关闭时复位为 -1
+    activeIndex.value = -1 // Reset to -1 when closing
     query.value = ''
     triggerQuery.value = undefined
     rawItems.value = []
-    navigationMode.value = 'keyboard' // 复位导航模式
+    navigationMode.value = 'keyboard' // Reset navigation mode
   }
 
-  // === 鼠标交互 ===
+  // === Mouse interaction ===
   function handleMouseEnter(index: number) {
     navigationMode.value = 'mouse'
     activeIndex.value = index
   }
 
   function handleMouseLeave() {
-    // 鼠标离开时复位索引为 -1（表示无选中项）
+    // Reset index to -1 on mouse leave (indicates no selected item)
     activeIndex.value = -1
   }
 
-  // === manual 模式：搜索（防抖） ===
+  // === manual mode: search (debounced) ===
   let debounceTimer: number | undefined
   function handleSearch(term: string) {
     query.value = term
@@ -310,14 +310,14 @@ export function useCompletionDropdown<T>(
     }, 120)
   }
 
-  // === 键盘事件处理 ===
+  // === Keyboard event handling ===
   function handleKeydown(event: KeyboardEvent) {
     navigation.handleKeydown(event)
   }
 
-  // === 直接选择当前/指定项（用于鼠标点击等场景） ===
+  // === Direct selection of current/specified item (for mouse click scenarios, etc.) ===
   function selectActive() {
-    // 复用导航选择逻辑
+    // Reuse navigation selection logic
     navigation.selectActive()
   }
 
@@ -331,18 +331,18 @@ export function useCompletionDropdown<T>(
     }
   }
 
-  // === 查询变化时重新加载（仅 manual 模式，inline 模式由 evaluateQuery 触发） ===
-  // inline 模式已在 evaluateQuery 中调用 loadItemsDebounced，避免重复触发
+  // === Reload on query change (manual mode only, inline mode triggered by evaluateQuery) ===
+  // inline mode already calls loadItemsDebounced in evaluateQuery, avoiding duplicate triggers
   watch(query, (newQuery) => {
-    // inline 模式不再通过 watch 触发加载，防止重复调用
+    // inline mode no longer triggers loading via watch, preventing duplicate calls
     if (mode === 'inline') return
-    // manual 模式由 handleSearch 触发
+    // manual mode triggered by handleSearch
     if (mode === 'manual') return
 
     if (isOpen.value) void loadItems(newQuery)
   })
 
-  // === 列表变化时收敛选中索引，避免越界 ===
+  // === Constrain selected index on list change, avoiding out-of-bounds ===
   watch(items, (list) => {
     const len = list.length
     if (len === 0) {
@@ -361,8 +361,8 @@ export function useCompletionDropdown<T>(
     query,
     triggerQuery,
     navigationMode,
-    // 暴露 loading（可选使用）
-    // @ts-expect-error: 额外暴露状态，向后兼容
+    // Expose loading (optional use)
+    // @ts-expect-error: Extra exposed state, backward compatible
     loading: isLoading,
     open,
     close,

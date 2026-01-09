@@ -1,12 +1,12 @@
 import type { TriggerQuery, TriggerDetectionOptions } from '../types/completion'
 
 /**
- * 触发符检测 Composable
+ * Trigger Character Detection Composable
  *
- * 用于检测输入文本中的触发符（如 '/' 或 '@'），并解析查询信息
+ * Used to detect trigger characters in input text (such as '/' or '@') and parse query information
  *
- * @param options 检测选项
- * @returns 触发检测相关函数
+ * @param options Detection options
+ * @returns Trigger detection related functions
  *
  * @example
  * const { findQuery, getCaretOffset } = useTriggerDetection({ trigger: '/' })
@@ -17,10 +17,10 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
   const { trigger, customRegex } = options
 
   /**
-   * 获取光标在文本中的偏移量
+   * Get cursor offset in text
    *
-   * @param element contenteditable 元素
-   * @returns 光标偏移量，失败返回 undefined
+   * @param element contenteditable element
+   * @returns Cursor offset, returns undefined on failure
    */
   function getCaretOffset(element: HTMLElement | null): number | undefined {
     if (!element) return undefined
@@ -31,7 +31,7 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
     const range = selection.getRangeAt(0)
     if (!element.contains(range.startContainer)) return undefined
 
-    // 创建一个从元素开始到光标位置的范围
+    // Create a range from element start to cursor position
     const preCaretRange = range.cloneRange()
     preCaretRange.selectNodeContents(element)
     preCaretRange.setEnd(range.endContainer, range.endOffset)
@@ -40,15 +40,15 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
   }
 
   /**
-   * 查找文本中的触发查询
+   * Find trigger query in text
    *
-   * @param text 输入文本
-   * @param caret 光标位置
-   * @returns 触发查询信息，未找到返回 undefined
+   * @param text Input text
+   * @param caret Cursor position
+   * @returns Trigger query information, returns undefined if not found
    */
   function findQuery(text: string, caret: number): TriggerQuery | undefined {
-    // 构建正则表达式
-    // 匹配：行首或空格后的触发符，后跟非空格和非触发符的字符
+    // Build regular expression
+    // Match: trigger character at line start or after space, followed by non-space and non-trigger characters
     const escapedTrigger = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const regex = customRegex || new RegExp(
       `(?:^|\\s)${escapedTrigger}[^\\s${escapedTrigger}]*`,
@@ -59,11 +59,11 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
 
     for (const match of matches) {
       const matchIndex = match.index ?? 0
-      // 找到触发符的实际位置（可能在空格之后）
+      // Find actual position of trigger character (may be after a space)
       const start = text.indexOf(trigger, matchIndex)
       const end = start + match[0].trim().length
 
-      // 检查光标是否在触发范围内
+      // Check if cursor is within trigger range
       if (caret > start && caret <= end) {
         return {
           query: text.substring(start + trigger.length, end),
@@ -78,12 +78,12 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
   }
 
   /**
-   * 替换文本中的触发范围
+   * Replace trigger range in text
    *
-   * @param text 原始文本
-   * @param query 触发查询信息
-   * @param replacement 替换文本
-   * @returns 替换后的文本
+   * @param text Original text
+   * @param query Trigger query information
+   * @param replacement Replacement text
+   * @returns Text after replacement
    */
   function replaceRange(
     text: string,
@@ -92,7 +92,7 @@ export function useTriggerDetection(options: TriggerDetectionOptions) {
   ): string {
     const before = text.substring(0, query.start)
     const after = text.substring(query.end)
-    // 如果后面没有空格，自动添加一个
+    // Automatically add a space if none follows
     const suffix = after.startsWith(' ') ? '' : ' '
     return `${before}${replacement}${suffix}${after}`
   }

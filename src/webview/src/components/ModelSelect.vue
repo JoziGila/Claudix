@@ -70,7 +70,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// 计算显示的模型名称
+// Calculate display model name
 const selectedModelLabel = computed(() => {
   switch (props.selectedModel) {
     case 'claude-opus-4-5':
@@ -88,13 +88,13 @@ function handleModelSelect(item: DropdownItemData, close: () => void) {
   console.log('Selected model:', item)
   close()
 
-  // 发送模型切换事件
+  // Send model switch event
   emit('modelSelect', item.id)
 }
 </script>
 
 <style scoped>
-/* Model 下拉样式 - 简洁透明样式 */
+/* Model dropdown style - simple transparent style */
 .model-dropdown {
   display: flex;
   gap: 4px;
@@ -117,7 +117,7 @@ function handleModelSelect(item: DropdownItemData, close: () => void) {
   background-color: var(--vscode-inputOption-hoverBackground);
 }
 
-/* 共享的 Dropdown 样式 */
+/* Shared dropdown styles */
 .dropdown-content {
   display: flex;
   align-items: center;

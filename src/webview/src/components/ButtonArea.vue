@@ -47,7 +47,7 @@
           @close="handleDropdownClose"
           @search="handleSearch"
         >
-          <!-- 自定义触发器按钮 -->
+          <!-- Custom trigger button -->
           <template #trigger>
             <button
               class="action-button"
@@ -57,7 +57,7 @@
             </button>
           </template>
 
-          <!-- 下拉内容 -->
+          <!-- Dropdown content -->
           <template #content="{ close }">
             <div @mouseleave="commandCompletion.handleMouseLeave">
               <template v-for="(item, index) in commandCompletion.items.value" :key="item.id">
@@ -88,7 +88,7 @@
           @close="handleMentionDropdownClose"
           @search="handleMentionSearch"
         >
-          <!-- 自定义触发器按钮 -->
+          <!-- Custom trigger button -->
           <template #trigger>
             <button
               class="action-button"
@@ -98,7 +98,7 @@
             </button>
           </template>
 
-          <!-- 下拉内容 -->
+          <!-- Dropdown content -->
           <template #content="{ close }">
             <div @mouseleave="fileCompletion.handleMouseLeave">
               <template v-for="(item, index) in fileCompletion.items.value" :key="item.id">
@@ -109,7 +109,7 @@
                   @click="(item) => handleFileClick(item, close)"
                   @mouseenter="fileCompletion.handleMouseEnter(index)"
                 >
-                  <!-- 使用 FileIcon 组件显示文件图标 -->
+                  <!-- Use FileIcon component to display file icon -->
                   <template #icon v-if="'data' in item && item.data?.file">
                     <FileIcon :file-name="item.data.file.name" :size="16" />
                   </template>
@@ -221,34 +221,34 @@ const fileInputRef = ref<HTMLInputElement>()
 const commandDropdownRef = ref<InstanceType<typeof DropdownTrigger>>()
 const mentionDropdownRef = ref<InstanceType<typeof DropdownTrigger>>()
 
-// 获取 runtime 以访问 CommandRegistry
+// Get runtime to access CommandRegistry
 const runtime = inject(RuntimeKey)
 
-// === 使用新的 Completion Dropdown Composable ===
+// === Using new Completion Dropdown Composable ===
 
-// Slash Command 补全
+// Slash Command completion
 const commandCompletion = useCompletionDropdown({
   mode: 'manual',
   provider: (query) => getSlashCommands(query, runtime),
   toDropdownItem: commandToDropdownItem,
   onSelect: (command) => {
-    // 执行命令
+    // Execute command
     if (runtime) {
       runtime.appContext.commandRegistry.executeCommand(command.id)
     }
     commandCompletion.close()
   },
-  showSectionHeaders: false, // 目前不显示分组，保持简洁
+  showSectionHeaders: false, // Currently not showing groups, keep it simple
   searchFields: ['label', 'description']
 })
 
-// @ 文件引用补全
+// @ file reference completion
 const fileCompletion = useCompletionDropdown({
   mode: 'manual',
   provider: (query) => getFileReferences(query, runtime),
   toDropdownItem: fileToDropdownItem,
   onSelect: (file) => {
-    // 触发 mention 事件并传递文件路径
+    // Trigger mention event and pass file path
     emit('mention', file.path)
     fileCompletion.close()
   },
@@ -260,17 +260,17 @@ const fileCompletion = useCompletionDropdown({
 const isThinkingOn = computed(() => props.thinkingLevel !== 'off')
 
 const submitVariant = computed(() => {
-  // 对齐 React：busy 时始终显示停止按钮
+  // Align with React: always show stop button when busy
   if (props.conversationWorking) {
     return 'stop'
   }
 
-  // 未 busy 且无输入 -> 禁用
+  // Not busy and no input -> disabled
   if (!props.hasInputContent) {
     return 'disabled'
   }
 
-  // 其余 -> 可发送
+  // Otherwise -> can send
   return 'enabled'
 })
 
@@ -286,16 +286,16 @@ function handleSubmit() {
 function handleCommandClick(item: any, close: () => void) {
   console.log('Command clicked:', item)
 
-  // 使用 commandCompletion 选择命令
+  // Use commandCompletion to select command
   if (item.data?.command) {
-    // 找到命令在列表中的索引并选择
+    // Find command index in list and select
     const index = commandCompletion.items.value.findIndex(i => i.id === item.id)
     if (index !== -1) {
       commandCompletion.selectIndex(index)
     }
   }
 
-  // 关闭菜单
+  // Close menu
   close()
 }
 
@@ -303,17 +303,17 @@ function handleCommandClick(item: any, close: () => void) {
 function handleFileClick(item: any, close: () => void) {
   console.log('File clicked:', item)
 
-  // 使用 fileCompletion 选择文件
+  // Use fileCompletion to select file
   if (item.data?.file) {
     const index = fileCompletion.items.value.findIndex(i => i.id === item.id)
     if (index !== -1) {
-      // 先设置 activeIndex，再调用 selectActive
+      // First set activeIndex, then call selectActive
       fileCompletion.activeIndex.value = index
       fileCompletion.selectActive()
     }
   }
 
-  // 关闭菜单
+  // Close menu
   close()
 }
 
@@ -333,55 +333,55 @@ function handleFileUpload(event: Event) {
   const target = event.target as HTMLInputElement
   if (target.files && target.files.length > 0) {
     emit('addAttachment', target.files)
-    // 清空 input，允许重复选择同一文件
+    // Clear input, allow selecting same file again
     target.value = ''
   }
 }
 
-// Command dropdown - 打开时的处理
+// Command dropdown - open handler
 function handleDropdownOpen() {
   commandCompletion.open()
-  // 添加键盘事件监听
+  // Add keyboard event listener
   document.addEventListener('keydown', handleCommandKeydown)
 }
 
-// Command dropdown - 关闭时的处理
+// Command dropdown - close handler
 function handleDropdownClose() {
   commandCompletion.close()
-  // 移除键盘事件监听
+  // Remove keyboard event listener
   document.removeEventListener('keydown', handleCommandKeydown)
 }
 
-// Command dropdown - 搜索事件处理
+// Command dropdown - search event handler
 function handleSearch(term: string) {
   commandCompletion.handleSearch(term)
 }
 
-// Command dropdown - 键盘事件处理
+// Command dropdown - keyboard event handler
 function handleCommandKeydown(event: KeyboardEvent) {
   commandCompletion.handleKeydown(event)
 }
 
-// Mention dropdown - 打开时的处理
+// Mention dropdown - open handler
 function handleMentionDropdownOpen() {
   fileCompletion.open()
-  // 添加键盘事件监听
+  // Add keyboard event listener
   document.addEventListener('keydown', handleMentionKeydown)
 }
 
-// Mention dropdown - 关闭时的处理
+// Mention dropdown - close handler
 function handleMentionDropdownClose() {
   fileCompletion.close()
-  // 移除键盘事件监听
+  // Remove keyboard event listener
   document.removeEventListener('keydown', handleMentionKeydown)
 }
 
-// Mention dropdown - 搜索事件处理
+// Mention dropdown - search event handler
 function handleMentionSearch(term: string) {
   fileCompletion.handleSearch(term)
 }
 
-// Mention dropdown - 键盘事件处理
+// Mention dropdown - keyboard event handler
 function handleMentionKeydown(event: KeyboardEvent) {
   fileCompletion.handleKeydown(event)
 }
@@ -462,12 +462,12 @@ function handleMentionKeydown(event: KeyboardEvent) {
   opacity: 1;
 }
 
-/* Think 按钮专用：取消 hover opacity 效果，避免 off 状态下的误解 */
+/* Think button only: disable hover opacity effect to avoid confusion in off state */
 .action-button.think-button:hover:not(.thinking-active) {
-  opacity: 0.5; /* 保持默认 opacity，不增加到 1 */
+  opacity: 0.5; /* Keep default opacity, don't increase to 1 */
 }
 
-/* 激活状态下的 hover 可以保持 */
+/* Hover in active state can be maintained */
 .action-button.think-button.thinking-active:hover {
   opacity: 1;
 }

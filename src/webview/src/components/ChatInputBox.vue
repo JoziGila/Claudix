@@ -1,7 +1,7 @@
 <template>
-  <!-- 输入框 - 三行布局结构 -->
+  <!-- Input box - three-row layout structure -->
   <div class="full-input-box" style="position: relative;">
-    <!-- 附件列表（如果有附件） -->
+    <!-- Attachment list (if there are attachments) -->
     <div v-if="attachments && attachments.length > 0" class="attachments-list">
       <div
         v-for="attachment in attachments"
@@ -24,7 +24,7 @@
       </div>
     </div>
 
-    <!-- 第一行：输入框区域 -->
+    <!-- First row: Input box area -->
     <div
       ref="textareaRef"
       contenteditable="true"
@@ -38,7 +38,7 @@
       @drop="handleDrop"
     />
 
-    <!-- 第二行：ButtonArea 组件 + TokenIndicator -->
+    <!-- Second row: ButtonArea component + TokenIndicator -->
     <ButtonArea
       :disabled="isSubmitDisabled"
       :loading="isLoading"
@@ -91,7 +91,7 @@
       </template>
     </Dropdown>
 
-    <!-- @ 文件引用 Dropdown -->
+    <!-- @ file reference Dropdown -->
     <Dropdown
       v-if="fileCompletion.isOpen.value"
       :is-visible="fileCompletion.isOpen.value"
@@ -198,9 +198,9 @@ const isSubmitDisabled = computed(() => {
   return !content.value.trim() || isLoading.value
 })
 
-// === 使用新的 Completion Dropdown Composable ===
+// === Using new Completion Dropdown Composable ===
 
-// Slash Command 补全
+// Slash Command completion
 const slashCompletion = useCompletionDropdown({
   mode: 'inline',
   trigger: '/',
@@ -208,24 +208,24 @@ const slashCompletion = useCompletionDropdown({
   toDropdownItem: commandToDropdownItem,
   onSelect: (command, query) => {
     if (query) {
-      // 替换文本
+      // Replace text
       const updated = slashCompletion.replaceText(content.value, `${command.label} `)
       content.value = updated
 
-      // 更新 DOM
+      // Update DOM
       if (textareaRef.value) {
         textareaRef.value.textContent = updated
         placeCaretAtEnd(textareaRef.value)
       }
 
-      // 触发输入事件
+      // Trigger input event
       emit('input', updated)
     }
   },
   anchorElement: textareaRef
 })
 
-// @ 文件引用补全
+// @ file reference completion
 const fileCompletion = useCompletionDropdown({
   mode: 'inline',
   trigger: '@',
@@ -233,24 +233,24 @@ const fileCompletion = useCompletionDropdown({
   toDropdownItem: fileToDropdownItem,
   onSelect: (file, query) => {
     if (query) {
-      // 替换文本，插入文件路径
+      // Replace text, insert file path
       const updated = fileCompletion.replaceText(content.value, `@${file.path} `)
       content.value = updated
 
-      // 更新 DOM
+      // Update DOM
       if (textareaRef.value) {
         textareaRef.value.textContent = updated
         placeCaretAtEnd(textareaRef.value)
       }
 
-      // 触发输入事件
+      // Trigger input event
       emit('input', updated)
     }
   },
   anchorElement: textareaRef
 })
 
-// 将光标移至末尾
+// Move caret to end
 function placeCaretAtEnd(node: HTMLElement) {
   const range = document.createRange()
   range.selectNodeContents(node)
@@ -260,7 +260,7 @@ function placeCaretAtEnd(node: HTMLElement) {
   selection?.addRange(range)
 }
 
-// 获取光标的客户端矩形
+// Get caret client rectangle
 function getCaretClientRect(editable: HTMLElement | null): DOMRect | undefined {
   if (!editable) return undefined
 
@@ -270,19 +270,19 @@ function getCaretClientRect(editable: HTMLElement | null): DOMRect | undefined {
   const range = sel.getRangeAt(0).cloneRange()
   if (!editable.contains(range.startContainer)) return undefined
 
-  // collapsed range 一般有 0 宽度，但有行高；用 getClientRects 优先
+  // collapsed range usually has 0 width, but has line height; prefer getClientRects
   const rects = range.getClientRects()
   const rect = rects[0] || range.getBoundingClientRect()
   if (!rect) return undefined
 
-  // 兜底行高，避免 0 高导致 Dropdown 内部计算异常
+  // Fallback line height, avoid dropdown internal calculation error caused by 0 height
   const lh = parseFloat(getComputedStyle(editable).lineHeight || '0') || 16
   const height = rect.height || lh
 
   return new DOMRect(rect.left, rect.top, rect.width, height)
 }
 
-// 根据字符偏移获取矩形（用于锚定在触发词开头）
+// Get rect by character offset (for anchoring at trigger start)
 function getRectAtCharOffset(editable: HTMLElement, charOffset: number): DOMRect | undefined {
   const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT)
   let remaining = charOffset
@@ -306,7 +306,7 @@ function getRectAtCharOffset(editable: HTMLElement, charOffset: number): DOMRect
   return undefined
 }
 
-// 更新 dropdown 位置
+// Update dropdown position
 function updateDropdownPosition(
   completion: typeof slashCompletion | typeof fileCompletion,
   anchor: 'caret' | 'queryStart' = 'queryStart'
@@ -316,17 +316,17 @@ function updateDropdownPosition(
 
   let rect: DOMRect | undefined
 
-  // 优先锚定在触发词开头
+  // Prioritize anchoring at trigger start
   if (anchor === 'queryStart' && completion.triggerQuery.value) {
     rect = getRectAtCharOffset(el, completion.triggerQuery.value.start)
   }
 
-  // 兜底：锚定在光标位置
+  // Fallback: anchor at caret position
   if (!rect && anchor === 'caret') {
     rect = getCaretClientRect(el)
   }
 
-  // 最终兜底：使用输入框自身矩形
+  // Final fallback: use input box's own rect
   if (!rect) {
     const r = el.getBoundingClientRect()
     rect = new DOMRect(r.left, r.top, r.width, r.height)
@@ -344,7 +344,7 @@ function handleInput(event: Event) {
   const target = event.target as HTMLDivElement
   const textContent = target.textContent || ''
 
-  // 只有在完全没有内容时才清理 div
+  // Only clean div when there is absolutely no content
   if (textContent.length === 0) {
     target.innerHTML = ''
   }
@@ -352,11 +352,11 @@ function handleInput(event: Event) {
   content.value = textContent
   emit('input', textContent)
 
-  // 评估补全（slash 和 @）
+  // Evaluate completion (slash and @)
   slashCompletion.evaluateQuery(textContent)
   fileCompletion.evaluateQuery(textContent)
 
-  // 更新 dropdown 位置（锚定在触发词开头）
+  // Update dropdown position (anchor at trigger start)
   if (slashCompletion.isOpen.value) {
     nextTick(() => {
       updateDropdownPosition(slashCompletion, 'queryStart')
@@ -368,7 +368,7 @@ function handleInput(event: Event) {
     })
   }
 
-  // 自适应高度
+  // Auto-resize height
   autoResizeTextarea()
 }
 
@@ -378,20 +378,20 @@ function autoResizeTextarea() {
   nextTick(() => {
     const divElement = textareaRef.value!
 
-    // 重置高度以获取准确的 scrollHeight
+    // Reset height to get accurate scrollHeight
     divElement.style.height = '20px'
 
-    // 计算所需高度
+    // Calculate required height
     const scrollHeight = divElement.scrollHeight
     const minHeight = 20
     const maxHeight = 240
 
     if (scrollHeight <= maxHeight) {
-      // 内容未超出最大高度，调整高度并隐藏滚动条
+      // Content not exceeding max height, adjust height and hide scrollbar
       divElement.style.height = Math.max(scrollHeight, minHeight) + 'px'
       divElement.style.overflowY = 'hidden'
     } else {
-      // 内容超出最大高度，设置最大高度并显示滚动条
+      // Content exceeding max height, set max height and show scrollbar
       divElement.style.height = maxHeight + 'px'
       divElement.style.overflowY = 'auto'
     }
@@ -399,21 +399,21 @@ function autoResizeTextarea() {
 }
 
 function handleKeydown(event: KeyboardEvent) {
-  // 优先处理补全菜单的键盘事件
+  // Prioritize handling keyboard events for completion menu
   if (slashCompletion.isOpen.value) {
     slashCompletion.handleKeydown(event)
     return
   }
 
-  // 处理文件引用补全的键盘事件
+  // Handle keyboard events for file reference completion
   if (fileCompletion.isOpen.value) {
     fileCompletion.handleKeydown(event)
     return
   }
 
-  // 其他按键处理
+  // Other key handling
   if (event.key === 'Enter' && !event.shiftKey) {
-    // 检查是否正在输入法组合状态(中文输入法等)
+    // Check if in IME composition state (Chinese input method, etc.)
     if (event.isComposing) {
       return
     }
@@ -421,7 +421,7 @@ function handleKeydown(event: KeyboardEvent) {
     handleSubmit()
   }
 
-  // 延迟检查内容是否为空（在按键处理后）
+  // Delayed check if content is empty (after key handling)
   if (event.key === 'Backspace' || event.key === 'Delete') {
     setTimeout(() => {
       const target = event.target as HTMLDivElement
@@ -462,7 +462,7 @@ function handlePaste(event: ClipboardEvent) {
     for (const file of files) {
       dataTransfer.items.add(file)
     }
-    // 触发附件添加
+    // Trigger attachment addition
     handleAddFiles(dataTransfer.files)
   }
 }
@@ -502,7 +502,7 @@ function toWorkspaceRelativePath(absoluteOrMixedPath: string): string {
   const normRoot = root.replace(/\\/g, '/').replace(/\/+$/, '')
   let normPath = absoluteOrMixedPath.replace(/\\/g, '/')
 
-  // 处理 Windows 上 file:// URI 转换后形如 /C:/ 的情况
+  // Handle Windows file:// URI conversion resulting in /C:/ format
   if (normPath.startsWith('/') && /^[A-Za-z]:\//.test(normPath.slice(1))) {
     normPath = normPath.slice(1)
   }
@@ -596,7 +596,7 @@ async function statPaths(
 }
 
 function handleDragOver(event: DragEvent) {
-  // 仅在按住 Shift 且为文件/URI 拖拽时拦截，避免干扰普通文本拖拽
+  // Only intercept when Shift is held and it's file/URI drag, to avoid interfering with normal text drag
   if (!event.shiftKey) return
   if (!isFileDrop(event)) return
 
@@ -607,7 +607,7 @@ async function handleDrop(event: DragEvent) {
   const dataTransfer = event.dataTransfer
   if (!dataTransfer) return
 
-  // 按住 Shift 时，将资源管理器文件拖入视为“插入路径”
+  // When Shift is held, treat dragging files from file explorer as "insert path"
   if (!event.shiftKey) return
   if (!isFileDrop(event)) return
 
@@ -649,20 +649,20 @@ function handleSubmit() {
   if (!content.value.trim()) return
 
   if (props.conversationWorking) {
-    // 对话工作中，添加到队列
+    // Conversation is working, add to queue
     emit('queueMessage', content.value)
   } else {
-    // 对话未工作，直接发送
+    // Conversation is not working, send directly
     emit('submit', content.value)
   }
 
-  // 清空输入框
+  // Clear input box
   content.value = ''
   if (textareaRef.value) {
     textareaRef.value.textContent = ''
   }
 
-  // 等待 DOM 更新后重置输入框高度
+  // Wait for DOM update then reset input box height
   nextTick(() => {
     autoResizeTextarea()
   })
@@ -675,20 +675,20 @@ function handleStop() {
 function handleMention(filePath?: string) {
   if (!filePath) return
 
-  // 在光标位置插入 @文件路径
+  // Insert @filepath at caret position
   const updatedContent = content.value + `@${filePath} `
   content.value = updatedContent
 
-  // 更新 DOM
+  // Update DOM
   if (textareaRef.value) {
     textareaRef.value.textContent = updatedContent
     placeCaretAtEnd(textareaRef.value)
   }
 
-  // 触发输入事件
+  // Trigger input event
   emit('input', updatedContent)
 
-  // 自动聚焦到输入框
+  // Auto focus to input box
   nextTick(() => {
     textareaRef.value?.focus()
   })
@@ -702,12 +702,12 @@ function handleRemoveAttachment(id: string) {
   emit('removeAttachment', id)
 }
 
-// 监听光标位置变化（仅在下拉菜单已打开时更新位置，避免重复触发请求）
+// Listen to caret position changes (only update position when dropdown is already open, avoid repeated requests)
 function handleSelectionChange() {
   if (!content.value || !textareaRef.value) return
 
-  // 仅在下拉菜单已打开时更新位置
-  // 避免重复调用 evaluateQuery（已在 handleInput 中调用）
+  // Only update position when dropdown is already open
+  // Avoid repeated calls to evaluateQuery (already called in handleInput)
   if (slashCompletion.isOpen.value) {
     nextTick(() => {
       updateDropdownPosition(slashCompletion, 'queryStart')
@@ -720,7 +720,7 @@ function handleSelectionChange() {
   }
 }
 
-// 添加/移除 selectionchange 监听
+// Add/remove selectionchange listener
 onMounted(() => {
   document.addEventListener('selectionchange', handleSelectionChange)
 })
@@ -729,9 +729,9 @@ onUnmounted(() => {
   document.removeEventListener('selectionchange', handleSelectionChange)
 })
 
-// 暴露方法：供父组件设置内容与聚焦
+// Expose methods: for parent component to set content and focus
 defineExpose({
-  /** 设置输入框内容并同步内部状态 */
+  /** Set input box content and sync internal state */
   setContent(text: string) {
     content.value = text || ''
     if (textareaRef.value) {
@@ -739,7 +739,7 @@ defineExpose({
     }
     autoResizeTextarea()
   },
-  /** 聚焦到输入框 */
+  /** Focus to input box */
   focus() {
     nextTick(() => textareaRef.value?.focus())
   }
@@ -748,18 +748,18 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 输入框基础样式 - 固定行高以稳定 caret 定位 */
+/* Input box base style - fixed line height to stabilize caret positioning */
 .aislash-editor-input {
   line-height: 18px;
 }
 
-/* 移除输入框聚焦时的边框 */
+/* Remove border when input box is focused */
 .aislash-editor-input:focus {
   outline: none !important;
   border: none !important;
 }
 
-/* 移除父容器聚焦时的边框 */
+/* Remove border when parent container is focused */
 .full-input-box:focus-within {
   border-color: var(--vscode-input-border) !important;
   outline: none !important;
@@ -779,7 +779,7 @@ defineExpose({
   pointer-events: none;
 }
 
-/* 附件列表样式 - 水平排列的 pills */
+/* Attachment list style - horizontally arranged pills */
 .attachments-list {
   display: flex;
   flex-direction: row;
@@ -815,7 +815,7 @@ defineExpose({
   border-color: var(--vscode-focusBorder);
 }
 
-/* 图标和关闭按钮的重叠容器 */
+/* Overlapping container for icon and close button */
 .icon-wrapper {
   position: relative;
   width: 16px;
@@ -837,7 +837,7 @@ defineExpose({
   scale: 0.8;
 }
 
-/* 确保图标样式正确应用（使用 :deep 穿透到 FileIcon 内部） */
+/* Ensure icon styles are correctly applied (use :deep to penetrate into FileIcon) */
 .attachment-item .attachment-icon :deep(.mdi),
 .attachment-item .attachment-icon :deep(.codicon) {
   color: var(--vscode-foreground);
@@ -855,7 +855,7 @@ defineExpose({
 }
 
 .attachment-size {
-  display: none; /* 隐藏文件大小，保持简洁 */
+  display: none; /* Hide file size, keep it simple */
 }
 
 .remove-button {
@@ -881,7 +881,7 @@ defineExpose({
   font-size: 14px;
 }
 
-/* hover attachment-item 时切换图标和按钮的显示 */
+/* Toggle icon and button display when hovering attachment-item */
 .attachment-item:hover .attachment-icon {
   opacity: 0;
 }
