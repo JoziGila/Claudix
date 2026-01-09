@@ -12,6 +12,7 @@
  */
 
 import * as fs from 'fs/promises';
+import type { Stats } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { createDecorator } from '../../di/instantiation';
@@ -242,13 +243,22 @@ async function loadProjectData(cwd: string): Promise<SessionData> {
         };
     }
 
-    const fileStats = await Promise.all(
+    // Fix #6: Use Promise.allSettled to handle files deleted between readdir and stat
+    const fileStatsResults = await Promise.allSettled(
         files.map(async file => {
             const filePath = path.join(projectDir, file);
             const stat = await fs.stat(filePath);
             return { name: filePath, stat };
         })
     );
+
+    // Filter out failed stats (files deleted between readdir and stat)
+    const fileStats: { name: string; stat: Stats }[] = [];
+    for (const result of fileStatsResults) {
+        if (result.status === 'fulfilled') {
+            fileStats.push(result.value as { name: string; stat: Stats });
+        }
+    }
 
     const jsonlFiles = fileStats
         .filter(file => file.stat.isFile() && file.name.endsWith(".jsonl"))
@@ -282,7 +292,9 @@ async function loadProjectData(cwd: string): Promise<SessionData> {
                         summaries.set(msg.leafUuid, msg.summary!);
                     }
                 }
-            } catch {
+            } catch (error) {
+                // Fix #9: Log JSONL read errors instead of silently swallowing
+                console.warn(`[ClaudeSessionService] Error reading session file ${file.name}:`, error);
             }
 
             return { sessionId, sessionMessages: messages, summaries };
