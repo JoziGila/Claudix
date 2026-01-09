@@ -1,11 +1,11 @@
 /**
- * Transport 模块统一导出
+ * Transport Module Unified Exports
  *
- * 包含：
- * - AsyncStream: 异步流抽象 (single-use)
- * - ResilientMessageQueue: 可重启的消息队列 (for persistent loops)
- * - BaseTransport/ITransport: 传输层接口
- * - VSCodeTransport: VSCode WebView 传输实现
+ * Contains:
+ * - AsyncStream: Async stream abstraction (single-use)
+ * - ResilientMessageQueue: Restartable message queue (for persistent loops)
+ * - BaseTransport/ITransport: Transport layer interface
+ * - VSCodeTransport: VSCode WebView transport implementation
  */
 
 export { AsyncStream } from './AsyncStream';
