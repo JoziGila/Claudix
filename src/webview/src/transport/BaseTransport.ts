@@ -17,6 +17,9 @@ import type {
 
 type ConnectionState = "connecting" | "connected" | "disconnected";
 
+// Default timeout for requests (ISSUE-003)
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+
 interface RequestHandler {
   resolve: (value: any) => void;
   reject: (error: Error) => void;
@@ -224,23 +227,64 @@ export abstract class BaseTransport {
     /* no-op */
   }
 
+  /**
+   * Send request with timeout support (ISSUE-003)
+   *
+   * @param request - Request to send
+   * @param channelId - Optional channel ID
+   * @param abortSignal - Optional external abort signal
+   * @param timeoutMs - Timeout in milliseconds (default: 30s)
+   */
   protected async sendRequest<TResponse = any>(
     request: WebViewRequest,
     channelId?: string,
-    abortSignal?: AbortSignal
+    abortSignal?: AbortSignal,
+    timeoutMs: number = DEFAULT_REQUEST_TIMEOUT_MS
   ): Promise<TResponse> {
     const requestId = Math.random().toString(36).slice(2);
+
+    // Create timeout signal
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+
+    // Combine signals: external abort + timeout
+    const combinedSignal = abortSignal
+      ? AbortSignal.any([abortSignal, timeoutSignal])
+      : timeoutSignal;
+
+    // Handle abort (from external signal or timeout)
     const abortHandler = () => {
       this.cancelRequest(requestId);
+      const handler = this.outstandingRequests.get(requestId);
+      if (handler) {
+        const isTimeout = timeoutSignal.aborted;
+        handler.reject(new Error(
+          isTimeout
+            ? `Request timed out after ${timeoutMs}ms`
+            : 'Request aborted'
+        ));
+        this.outstandingRequests.delete(requestId);
+      }
     };
-    if (abortSignal)
-      abortSignal.addEventListener("abort", abortHandler, { once: true });
+
+    combinedSignal.addEventListener("abort", abortHandler, { once: true });
 
     return new Promise<TResponse>((resolve, reject) => {
+      // Check if already aborted
+      if (combinedSignal.aborted) {
+        const isTimeout = timeoutSignal.aborted;
+        reject(new Error(
+          isTimeout
+            ? `Request timed out after ${timeoutMs}ms`
+            : 'Request aborted'
+        ));
+        return;
+      }
+
       this.outstandingRequests.set(requestId, { resolve, reject });
       this.send({ type: "request", channelId, requestId, request });
     }).finally(() => {
-      if (abortSignal) abortSignal.removeEventListener("abort", abortHandler);
+      combinedSignal.removeEventListener("abort", abortHandler);
+      this.outstandingRequests.delete(requestId);
     });
   }
 

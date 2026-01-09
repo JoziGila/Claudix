@@ -28,6 +28,7 @@ import { IClaudeSessionService } from './ClaudeSessionService';
 import { AsyncStream, ITransport } from './transport';
 import { HandlerContext } from './handlers/types';
 import { IWebViewService } from '../webViewService';
+import { withTimeout, getTimeoutForRequest, TimeoutError } from '../../shared/timeout';
 
 // 消息类型导入
 import type {
@@ -770,15 +771,21 @@ export class ClaudeAgentService implements IClaudeAgentService {
     }
 
     /**
-     * 发送请求到客户端
+     * 发送请求到客户端 (ISSUE-003: with timeout)
+     *
+     * @param channelId - Channel ID
+     * @param request - Request to send
+     * @param timeoutMs - Optional timeout override (default based on request type)
      */
-    protected sendRequest<TRequest extends ExtensionRequest, TResponse>(
+    protected async sendRequest<TRequest extends ExtensionRequest, TResponse>(
         channelId: string,
-        request: TRequest
+        request: TRequest,
+        timeoutMs?: number
     ): Promise<TResponse> {
         const requestId = this.generateId();
+        const timeout = timeoutMs ?? getTimeoutForRequest(request.type);
 
-        return new Promise<TResponse>((resolve, reject) => {
+        const requestPromise = new Promise<TResponse>((resolve, reject) => {
             // 注册 Promise handlers
             this.outstandingRequests.set(requestId, { resolve, reject });
 
@@ -789,10 +796,23 @@ export class ClaudeAgentService implements IClaudeAgentService {
                 requestId,
                 request
             } as RequestMessage);
-        }).finally(() => {
+        });
+
+        try {
+            return await withTimeout(requestPromise, timeout);
+        } catch (error) {
+            // Clean up on timeout or error
+            this.outstandingRequests.delete(requestId);
+
+            if (error instanceof TimeoutError) {
+                this.logService.warn(`[ClaudeAgentService] Request ${request.type} timed out after ${timeout}ms`);
+                throw new Error(`Request to channel ${channelId} timed out after ${timeout}ms`);
+            }
+            throw error;
+        } finally {
             // 清理
             this.outstandingRequests.delete(requestId);
-        });
+        }
     }
 
     /**
