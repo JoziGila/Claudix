@@ -48,8 +48,8 @@ function parseBlock(raw: any): ContentBlockType[] {
     case 'thinking':
       return [createThinkingBlock(String(raw.thinking ?? ''))];
     case 'redacted_thinking':
-      // 官方方案：当思考开启时，历史 assistant 可能包含 redacted_thinking 以满足校验要求；
-      // 前端不展示该块，直接忽略
+      // Official approach: when thinking is enabled, historical assistant messages may contain
+      // redacted_thinking to satisfy validation requirements; frontend doesn't display this block
       return [];
     case 'image':
       return [createImageBlock(raw)];

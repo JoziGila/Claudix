@@ -1,7 +1,7 @@
 /**
- * MessageUtils - 消息处理工具函数
+ * MessageUtils - Message processing utility functions
  *
- * 对应原始代码的 rZe 和 LSe 函数
+ * Corresponds to original code's rZe and LSe functions
  */
 
 import { Message } from '../models/Message';
@@ -9,9 +9,9 @@ import { ContentBlockWrapper } from '../models/ContentBlockWrapper';
 import type { ToolResultBlock, ToolUseContentBlock, ContentBlockType } from '../models/ContentBlock';
 
 /**
- * 反向查找 tool_use block
+ * Reverse lookup for tool_use block
  *
- * 对应原始代码：
+ * Corresponds to original code:
  * function rZe(n, e) {
  *   for (let t = n.length - 1; t >= 0; t--) {
  *     let i = n[t];
@@ -25,26 +25,26 @@ import type { ToolResultBlock, ToolUseContentBlock, ContentBlockType } from '../
  *   }
  * }
  *
- * @param messages 消息数组
- * @param toolUseId tool_use 的 id
- * @returns 找到的 ContentBlockWrapper（包含 tool_use）
+ * @param messages Message array
+ * @param toolUseId ID of tool_use
+ * @returns Found ContentBlockWrapper (containing tool_use)
  */
 export function findToolUseBlock(
     messages: Message[],
     toolUseId: string
 ): ContentBlockWrapper | undefined {
-    // 从后往前遍历消息数组
+    // Traverse message array in reverse
     for (let i = messages.length - 1; i >= 0; i--) {
         const message = messages[i];
 
-        // 只在 assistant 消息中查找
+        // Only search in assistant messages
         if (message.type === 'assistant') {
             const content = message.message.content;
 
-            // content 应该是 ContentBlockWrapper[]
+            // content should be ContentBlockWrapper[]
             if (Array.isArray(content)) {
                 for (const wrapper of content) {
-                    // 检查是否是 tool_use 且 id 匹配
+                    // Check if tool_use and id matches
                     if (
                         wrapper.content.type === 'tool_use' &&
                         (wrapper.content as ToolUseContentBlock).id === toolUseId
@@ -60,9 +60,9 @@ export function findToolUseBlock(
 }
 
 /**
- * 关联 tool_result 到对应的 tool_use
+ * Associate tool_result with corresponding tool_use
  *
- * 对应原始代码：
+ * Corresponds to original code:
  * function LSe(n, e) {
  *   if (e.type === "user" && Array.isArray(e.message.content)) {
  *     for (let i of e.message.content) {
@@ -80,31 +80,31 @@ export function findToolUseBlock(
  *   }
  * }
  *
- * 注意：
- * - 这个函数在每次收到新消息时调用
- * - 它会检查新消息中的 tool_result blocks
- * - 并在历史消息中查找对应的 tool_use，通过 Signal 关联
+ * Notes:
+ * - This function is called each time a new message is received
+ * - It checks for tool_result blocks in the new message
+ * - And finds corresponding tool_use in message history, linking via Signal
  *
- * @param messages 当前消息数组（会被修改）
- * @param newMessage 新收到的消息
+ * @param messages Current message array (will be modified)
+ * @param newMessage Newly received message
  */
 export function attachToolResults(messages: Message[], newMessage: Message): void {
-    // 只处理 user 消息中的 tool_result
+    // Only process tool_result in user messages
     if (newMessage.type === 'user') {
         const content = newMessage.message.content;
 
         if (Array.isArray(content)) {
             for (const wrapper of content) {
-                // 检查是否是 tool_result
+                // Check if tool_result
                 if (wrapper.content.type === 'tool_result') {
                     const toolResult = wrapper.content as ToolResultBlock;
                     const toolUseId = toolResult.tool_use_id;
 
-                    // 在消息历史中反向查找对应的 tool_use
+                    // Reverse lookup for corresponding tool_use in message history
                     const toolUseWrapper = findToolUseBlock(messages, toolUseId);
 
                     if (toolUseWrapper) {
-                        // 通过 Signal 关联 tool_result（触发响应式更新！）
+                        // Associate tool_result via Signal (triggers reactive update!)
                         toolUseWrapper.setToolResult(toolResult);
                     }
                 }
@@ -114,25 +114,25 @@ export function attachToolResults(messages: Message[], newMessage: Message): voi
 }
 
 /**
- * 处理传入消息并添加到消息数组
+ * Process incoming message and add to message array
  *
- * 对应原始代码的完整 LSe 逻辑
+ * Corresponds to complete LSe logic in original code
  *
- * @param messages 当前消息数组
- * @param rawEvent 原始消息事件
+ * @param messages Current message array
+ * @param rawEvent Raw message event
  */
 export function processAndAttachMessage(messages: Message[], rawEvent: any): void {
-    // 1. 先关联 tool_result 和 toolUseResult（如果有）
-    // 注意：这一步要在添加新消息之前，因为 tool_use 应该已经在消息数组中了
+    // 1. First associate tool_result and toolUseResult (if any)
+    // Note: This step must happen before adding new message, as tool_use should already be in the array
     if (rawEvent.type === 'user' && Array.isArray(rawEvent.message?.content)) {
         for (const block of rawEvent.message.content) {
             if (block.type === 'tool_result') {
                 const toolUseWrapper = findToolUseBlock(messages, block.tool_use_id);
                 if (toolUseWrapper) {
-                    // 关联 tool_result（实时对话）
+                    // Associate tool_result (real-time conversation)
                     toolUseWrapper.setToolResult(block);
 
-                    // 关联 toolUseResult（会话加载时的额外数据）
+                    // Associate toolUseResult (extra data when loading session)
                     if (rawEvent.toolUseResult) {
                         toolUseWrapper.toolUseResult = rawEvent.toolUseResult;
                     }
@@ -141,7 +141,7 @@ export function processAndAttachMessage(messages: Message[], rawEvent: any): voi
         }
     }
 
-    // 2. 将原始事件转换为 Message 并添加到数组
+    // 2. Convert raw event to Message and add to array
     const message = Message.fromRaw(rawEvent);
     if (message) {
         messages.push(message);
@@ -149,14 +149,14 @@ export function processAndAttachMessage(messages: Message[], rawEvent: any): voi
 }
 
 /**
- * 将连续的 Read 工具消息合并为 ReadCoalesced（对齐原版 IJ/ySe/CSe/iZe 行为）
+ * Merge consecutive Read tool messages into ReadCoalesced (aligns with original IJ/ySe/CSe/iZe behavior)
  *
- * 规则：
- * - 连续的 assistant 消息，且每条包含 name === 'Read' 的 tool_use
- * - 且每条对应的第一个 tool_use 已有非错误的 tool_result（成功）
- * - 则合并为一条新的 assistant 消息：
- *   - content 为单个 tool_use（name: 'ReadCoalesced'，input: { fileReads: [...] }）
- *   - 并为该 tool_use 注入一个成功的 tool_result（"Successfully read N files"）
+ * Rules:
+ * - Consecutive assistant messages, each containing tool_use with name === 'Read'
+ * - And each corresponding first tool_use has a non-error tool_result (success)
+ * - Then merge into a new assistant message:
+ *   - content is a single tool_use (name: 'ReadCoalesced', input: { fileReads: [...] })
+ *   - and inject a successful tool_result ("Successfully read N files")
  */
 export function mergeConsecutiveReadMessages(messages: Message[]): Message[] {
     const result: Message[] = [];
@@ -208,18 +208,18 @@ function hasNonErrorToolResult(msg: Message): boolean {
     const wrapper = firstReadToolUseWrapper(msg);
     if (!wrapper) return false;
 
-    // 🔥 使用 alien-signals API：toolResult 是 signal，需要函数调用
+    // Using alien-signals API: toolResult is signal, needs function call
     const tr = wrapper.getToolResultValue();
     if (!tr) return false;
     return !tr.is_error;
 }
 
 function buildReadCoalescedMessage(group: Message[]): Message {
-    // 收集每条的 Read 输入
+    // Collect Read inputs from each message
     const fileReads = group.map(g => {
         const w = firstReadToolUseWrapper(g);
         const block = w?.content as ToolUseContentBlock | undefined;
-        // 与原版一致，容错：若拿不到则放空对象
+        // Aligned with original, fallback: return empty object if unavailable
         return block?.input ?? {};
     });
 
@@ -250,8 +250,8 @@ function buildReadCoalescedMessage(group: Message[]): Message {
 }
 
 /**
- * 检测消息是否为 Read tool 调用
- * @param message SDK 消息
+ * Check if message is a Read tool call
+ * @param message SDK message
  * @returns boolean
  */
 export function isReadToolMessage(message: any): boolean {
@@ -267,29 +267,29 @@ export function isReadToolMessage(message: any): boolean {
 }
 
 /**
- * 检测消息是否可见（非空白）
- * @param message SDK 消息
+ * Check if message is visible (non-empty)
+ * @param message SDK message
  * @returns boolean
  */
 export function isVisibleMessage(message: any): boolean {
     if (message.type !== 'assistant') {
-        return true; // 非助手消息默认可见
+        return true; // Non-assistant messages are visible by default
     }
 
     return message.message.content.some((block: any) => {
         if (block.type === 'text') {
             return block.text.trim() !== '';
         }
-        return true; // tool_use 默认可见
+        return true; // tool_use is visible by default
     });
 }
 
 /**
- * 合并连续的 Read tool 调用
- * 优化 UI 显示，减少冗余的 Read tool 消息
+ * Merge consecutive Read tool calls
+ * Optimize UI display, reduce redundant Read tool messages
  *
- * @param messages SDK 消息数组
- * @returns 优化后的消息数组
+ * @param messages SDK message array
+ * @returns Optimized message array
  */
 export function mergeConsecutiveReads(messages: any[]): any[] {
     const result: any[] = [];
@@ -298,11 +298,11 @@ export function mergeConsecutiveReads(messages: any[]): any[] {
     while (i < messages.length) {
         const current = messages[i];
 
-        // 检测是否为连续的 Read tool 调用
+        // Check if consecutive Read tool calls
         if (isReadToolMessage(current) && isVisibleMessage(current)) {
             const readMessages: any[] = [current];
 
-            // 收集连续的 Read 消息
+            // Collect consecutive Read messages
             let j = i + 1;
             while (j < messages.length) {
                 const next = messages[j];
@@ -314,7 +314,7 @@ export function mergeConsecutiveReads(messages: any[]): any[] {
                 }
             }
 
-            // 如果有多个连续的 Read，合并它们
+            // If multiple consecutive Reads, merge them
             if (readMessages.length > 1) {
                 const merged = mergeReadToolMessages(readMessages);
                 result.push(merged);
@@ -333,9 +333,9 @@ export function mergeConsecutiveReads(messages: any[]): any[] {
 }
 
 /**
- * 合并多个 Read tool 消息
- * @param messages Read tool 消息数组
- * @returns 合并后的单个消息
+ * Merge multiple Read tool messages
+ * @param messages Read tool message array
+ * @returns Single merged message
  */
 function mergeReadToolMessages(messages: any[]): any {
     if (messages.length === 0) {
@@ -346,12 +346,12 @@ function mergeReadToolMessages(messages: any[]): any {
         return messages[0];
     }
 
-    // 收集所有 tool_use 块
+    // Collect all tool_use blocks
     const toolUseBlocks = messages.flatMap((msg) =>
         msg.message.content.filter((block: any) => block.type === 'tool_use')
     );
 
-    // 使用第一个消息作为基础
+    // Use first message as base
     const base = messages[0];
 
     return {
@@ -371,9 +371,9 @@ function mergeReadToolMessages(messages: any[]): any {
 }
 
 /**
- * 提取消息中的文本内容
- * @param message SDK 消息
- * @returns 文本内容
+ * Extract text content from message
+ * @param message SDK message
+ * @returns Text content
  */
 export function extractMessageText(message: any): string {
     if (message.type === 'user') {
@@ -409,8 +409,8 @@ export function extractMessageText(message: any): string {
 }
 
 /**
- * 检测消息是否包含错误
- * @param message SDK 消息
+ * Check if message contains error
+ * @param message SDK message
  * @returns boolean
  */
 export function hasError(message: any): boolean {
@@ -421,12 +421,12 @@ export function hasError(message: any): boolean {
 }
 
 /**
- * 计算消息的 Token 数量（估算）
- * @param message SDK 消息
- * @returns Token 数量
+ * Calculate token count of message (estimate)
+ * @param message SDK message
+ * @returns Token count
  */
 export function estimateTokenCount(message: any): number {
     const text = extractMessageText(message);
-    // 简单估算：1 token ≈ 4 个字符
+    // Simple estimate: 1 token ≈ 4 characters
     return Math.ceil(text.length / 4);
 }
