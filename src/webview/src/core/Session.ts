@@ -320,13 +320,33 @@ export class Session {
     return channelId;
   }
 
+  /**
+   * Interrupt the current Claude session (ISSUE-019 fix)
+   *
+   * IMPORTANT: Uses optimistic reset to prevent freeze bug.
+   * The busy state is reset immediately rather than waiting
+   * for SDK response which may never arrive.
+   */
   async interrupt(): Promise<void> {
     const channelId = this.claudeChannelId();
     if (!channelId) {
       return;
     }
-    const connection = await this.getConnection();
-    connection.interruptClaude(channelId);
+
+    // ISSUE-019: Optimistically reset state BEFORE sending interrupt
+    // This prevents the freeze bug where busy stays true forever
+    this.busy(false);
+
+    // Clear channel ID to allow new messages
+    this.claudeChannelId(undefined);
+
+    try {
+      const connection = await this.getConnection();
+      connection.interruptClaude(channelId);
+    } catch (error) {
+      // Log but don't throw - state is already reset
+      console.warn('[Session] Interrupt failed:', error);
+    }
   }
 
   async restartClaude(): Promise<void> {
@@ -424,6 +444,11 @@ export class Session {
     this.streamingController.dispose();
   }
 
+  /**
+   * Read messages from the Claude stream (ISSUE-019 fix)
+   *
+   * IMPORTANT: Always resets busy(false) in finally clause to prevent freeze.
+   */
   private async readMessages(stream: AsyncIterable<any>): Promise<void> {
     try {
       for await (const event of stream) {
@@ -431,8 +456,10 @@ export class Session {
       }
     } catch (error) {
       this.error(error instanceof Error ? error.message : String(error));
-      this.busy(false);
     } finally {
+      // ISSUE-019: ALWAYS reset busy when stream ends, whether normal completion,
+      // error, or interruption. This prevents the freeze bug.
+      this.busy(false);
       this.claudeChannelId(undefined);
     }
   }
