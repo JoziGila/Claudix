@@ -1,7 +1,7 @@
 /**
- * Handler 类型定义
+ * Handler Type Definitions
  *
- * 所有 handler 应遵循统一签名，便于路由和复用
+ * All handlers should follow a uniform signature for routing and reuse
  */
 
 import { ILogService } from '../../logService';
@@ -17,8 +17,8 @@ import { IClaudeAgentService } from '../ClaudeAgentService';
 import { IWebViewService } from '../../webViewService';
 
 /**
- * Handler 上下文
- * 包含所有必要的服务接口，禁止直接使用 VS Code 原生 API
+ * Handler Context
+ * Contains all necessary service interfaces, direct VS Code API usage is prohibited
  */
 export interface HandlerContext {
     logService: ILogService;
@@ -35,7 +35,7 @@ export interface HandlerContext {
 }
 
 /**
- * Handler 函数类型
+ * Handler Function Type
  */
 export type HandlerFunction<TRequest = any, TResponse = any> = (
     request: TRequest,
