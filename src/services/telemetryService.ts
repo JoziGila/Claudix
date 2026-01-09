@@ -1,5 +1,5 @@
 /**
- * 遥测服务 / Telemetry Service
+ * Telemetry Service
  */
 
 import { createDecorator } from '../di/instantiation';

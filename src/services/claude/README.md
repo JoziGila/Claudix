@@ -1,92 +1,94 @@
-# Claude 服务模块
+# Claude Service Module
 
-基于依赖注入（DI）的 Claude Agent 核心服务，采用模块化架构设计。
+Claude Agent core services based on Dependency Injection (DI), using modular architecture design.
 
-## 目录结构
+## Directory Structure
 
 ```
 claude/
-├── transport/                      # 传输层模块
-│   ├── index.ts                   # 统一导出
-│   ├── AsyncStream.ts             # 流抽象（通用）
-│   ├── BaseTransport.ts           # 传输层抽象基类
-│   └── VSCodeTransport.ts         # VSCode WebView 实现
+├── transport/                      # Transport layer module
+│   ├── index.ts                   # Unified exports
+│   ├── AsyncStream.ts             # Stream abstraction (generic)
+│   ├── BaseTransport.ts           # Transport layer abstract base class
+│   └── VSCodeTransport.ts         # VSCode WebView implementation
 │
-├── handlers/                       # 请求处理器
-│   ├── types.ts                   # Handler 类型定义
-│   ├── sessions.ts                # 会话处理
-│   ├── auth.ts                    # 认证处理
-│   └── ...                        # 其他 handlers
+├── handlers/                       # Request handlers
+│   ├── types.ts                   # Handler type definitions
+│   ├── sessions.ts                # Session handling
+│   ├── auth.ts                    # Authentication handling
+│   └── ...                        # Other handlers
 │
-├── ClaudeAgentService.ts          # 核心编排服务
-├── ClaudeSdkService.ts            # SDK 薄封装
-└── ClaudeSessionService.ts        # 历史会话服务
+├── ClaudeAgentService.ts          # Core orchestration service
+├── ClaudeSdkService.ts            # SDK thin wrapper
+└── ClaudeSessionService.ts        # Historical session service
 ```
 
-## 架构层次
+## Architecture Layers
 
 ```
 ┌─────────────────────────────────────────────────┐
-│              ClaudeAgentService                 │  核心编排
-│  (编排、路由、会话管理、RPC)                      │
+│              ClaudeAgentService                 │  Core Orchestration
+│  (Orchestration, Routing, Session Mgmt, RPC)   │
 └────────────┬──────────────┬─────────────────────┘
              │              │
     ┌────────▼───────┐ ┌───▼──────────────┐
-    │  ITransport    │ │  ClaudeSdkService│      服务层
-    │  (传输层接口)   │ │  (SDK 封装)      │
+    │  ITransport    │ │  ClaudeSdkService│      Service Layer
+    │  (Transport    │ │  (SDK Wrapper)   │
+    │   Interface)   │ │                  │
     └────────┬───────┘ └───┬──────────────┘
              │              │
     ┌────────▼───────┐ ┌───▼──────────────┐
-    │ BaseTransport  │ │  AsyncStream     │      基础设施
-    │ (通用传输逻辑)  │ │  (流抽象)        │
+    │ BaseTransport  │ │  AsyncStream     │      Infrastructure
+    │ (Generic       │ │  (Stream         │
+    │  Transport)    │ │   Abstraction)   │
     └────────┬───────┘ └──────────────────┘
              │
     ┌────────▼───────┐
-    │VSCodeTransport │                            平台实现
+    │VSCodeTransport │                            Platform Implementation
     │(VSCode WebView)│
     └────────────────┘
 ```
 
-## 核心组件
+## Core Components
 
-### 传输层 (transport/)
+### Transport Layer (transport/)
 
-**BaseTransport** - 抽象基类
-- 提供消息缓冲、错误处理、监听器管理
-- 定义 ITransport 接口
-- 子类只需实现 `doSend()` 和 `doClose()`
+**BaseTransport** - Abstract Base Class
+- Provides message buffering, error handling, listener management
+- Defines ITransport interface
+- Subclasses only need to implement `doSend()` and `doClose()`
 
-**VSCodeTransport** - VSCode 实现
-- 继承 BaseTransport
-- 封装 VSCode WebView 通信
-- 自动管理资源（Disposable）
+**VSCodeTransport** - VSCode Implementation
+- Extends BaseTransport
+- Wraps VSCode WebView communication
+- Auto-manages resources (Disposable)
 
-**AsyncStream** - 流抽象
-- 生产者-消费者模式
-- 背压控制、错误传播
-- 供 Agent、SDK、Transport 复用
+**AsyncStream** - Stream Abstraction
+- Producer-consumer pattern
+- Backpressure control, error propagation
+- Reusable by Agent, SDK, Transport
 
-### 核心服务
+### Core Services
 
 **ClaudeAgentService**
-- 管理多个 Claude 会话（channels）
-- 路由请求到 handlers
-- RPC 请求-响应管理
-- 依赖 ITransport 接口（解耦）
+- Manages multiple Claude sessions (channels)
+- Routes requests to handlers
+- RPC request-response management
+- Depends on ITransport interface (decoupled)
 
 **ClaudeSdkService**
-- 封装 Claude Agent SDK
-- 提供 query() 和 interrupt() 方法
-- 配置管理（Options、Hooks、环境变量）
+- Wraps Claude Agent SDK
+- Provides query() and interrupt() methods
+- Configuration management (Options, Hooks, Environment Variables)
 
 **ClaudeSessionService**
-- 历史会话加载和管理
-- 提供 listSessions() 和 getSession()
-- 内部缓存优化
+- Historical session loading and management
+- Provides listSessions() and getSession()
+- Internal cache optimization
 
 ### Handlers
 
-统一签名：
+Unified signature:
 ```typescript
 async function handleXxx(
     request: TRequest,
@@ -95,25 +97,25 @@ async function handleXxx(
 ): Promise<TResponse>
 ```
 
-HandlerContext 仅包含服务接口，禁止直接使用 VS Code 原生 API。
+HandlerContext only includes service interfaces, direct use of VS Code native APIs is prohibited.
 
-## 使用示例
+## Usage Examples
 
-### 初始化
+### Initialization
 
 ```typescript
-// 1. 获取服务实例（通过 DI 容器）
+// 1. Get service instance (via DI container)
 const agentService = instantiationService.get(IClaudeAgentService);
 const logService = instantiationService.get(ILogService);
 
-// 2. 创建 Transport
+// 2. Create Transport
 const transport = new VSCodeTransport(webview, logService);
 
-// 3. 初始化 Agent
+// 3. Initialize Agent
 agentService.init(transport);
 ```
 
-### 启动会话
+### Start Session
 
 ```typescript
 await agentService.launchClaude(
@@ -125,7 +127,7 @@ await agentService.launchClaude(
 );
 ```
 
-### 扩展到其他平台
+### Extending to Other Platforms
 
 ```typescript
 // NestJS WebSocket Transport
@@ -147,43 +149,43 @@ class NestJSTransport extends BaseTransport {
     }
 }
 
-// 使用方式完全相同
+// Usage is exactly the same
 const transport = new NestJSTransport(gateway, logService);
 agentService.init(transport);
 ```
 
-## 设计原则
+## Design Principles
 
-1. **依赖注入**：所有服务通过 DI 容器管理
-2. **职责分离**：每个模块有明确的职责边界
-3. **接口隔离**：Transport、Handler 等都通过接口定义
-4. **开放封闭**：易于扩展（新 Handler、新 Transport），不易修改
-5. **平台解耦**：核心逻辑不依赖特定平台 API
+1. **Dependency Injection**: All services managed via DI container
+2. **Separation of Concerns**: Each module has clear responsibility boundaries
+3. **Interface Segregation**: Transport, Handler etc. all defined via interfaces
+4. **Open-Closed**: Easy to extend (new Handler, new Transport), hard to modify
+5. **Platform Decoupling**: Core logic does not depend on specific platform APIs
 
-## 扩展指南
+## Extension Guide
 
-### 添加新 Handler
+### Adding New Handler
 
-1. 在 `handlers/` 创建新文件
-2. 实现统一签名的处理函数
-3. 在 `ClaudeAgentService.handleRequest()` 添加路由
+1. Create new file in `handlers/`
+2. Implement handler function with unified signature
+3. Add routing in `ClaudeAgentService.handleRequest()`
 
-### 添加新 Transport
+### Adding New Transport
 
-1. 继承 `BaseTransport`
-2. 实现 `doSend()` 和 `doClose()`
-3. 可选：覆盖错误处理方法
+1. Extend `BaseTransport`
+2. Implement `doSend()` and `doClose()`
+3. Optional: Override error handling methods
 
-### 添加新服务
+### Adding New Service
 
-1. 定义服务接口（使用 createDecorator）
-2. 实现服务类
-3. 在 serviceRegistry 注册
-4. 通过构造函数注入使用
+1. Define service interface (using createDecorator)
+2. Implement service class
+3. Register in serviceRegistry
+4. Inject via constructor
 
-## 测试
+## Testing
 
-传输层模块化设计使得测试更容易：
+Modular transport layer design makes testing easier:
 
 ```typescript
 // Mock Transport
@@ -198,17 +200,17 @@ class MockTransport extends BaseTransport {
         this.messages = [];
     }
 
-    // 模拟接收消息
+    // Simulate receiving message
     simulateMessage(message: any): void {
         this.handleIncomingMessage(message);
     }
 }
 
-// 使用 Mock Transport 测试
+// Test using Mock Transport
 const mockTransport = new MockTransport(logService);
 agentService.init(mockTransport);
 
-// 验证发送的消息
+// Verify sent messages
 expect(mockTransport.messages).toContainEqual({
     type: 'io_message',
     channelId: 'test',
@@ -216,7 +218,7 @@ expect(mockTransport.messages).toContainEqual({
 });
 ```
 
-## 参考文档
+## Reference Documentation
 
-- [RefactorFunctions.md](../../../RefactorFunctions.md) - 重构方案详细说明
-- [REFACTOR_SUMMARY.md](../../../REFACTOR_SUMMARY.md) - 重构总结和架构分析
+- [RefactorFunctions.md](../../../RefactorFunctions.md) - Detailed refactoring plan
+- [REFACTOR_SUMMARY.md](../../../REFACTOR_SUMMARY.md) - Refactoring summary and architecture analysis

@@ -207,10 +207,10 @@ export class ClaudeAgentService implements IClaudeAgentService {
     // Track active forwarding loops for cleanup (Fix #3)
     private forwardingLoops = new Map<string, { promise: Promise<void>; abort: AbortController }>();
 
-    // Handler 上下文（缓存）
+    // Handler context (cached)
     private handlerContext: HandlerContext;
 
-    // Thinking Level 配置
+    // Thinking Level configuration
     private thinkingLevel: string = 'default_on';
 
     constructor(

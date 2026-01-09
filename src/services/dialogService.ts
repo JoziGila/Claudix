@@ -1,5 +1,5 @@
 /**
- * 对话框服务 / Dialog Service
+ * Dialog Service
  */
 
 import * as vscode from 'vscode';
