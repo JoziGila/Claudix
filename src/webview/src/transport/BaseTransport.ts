@@ -1,5 +1,6 @@
 import { signal } from "alien-signals";
 import { AsyncQueue } from "./AsyncQueue";
+import { VersionedStreamMap } from "./VersionedStreamMap";
 import { EventEmitter } from "../utils/events";
 import { PermissionRequest } from "../core/PermissionRequest";
 import type { PermissionResult, PermissionMode } from "@anthropic-ai/claude-agent-sdk";
@@ -47,7 +48,8 @@ export abstract class BaseTransport {
     new EventEmitter<PermissionRequest>();
 
   protected readonly fromHost = new AsyncQueue<ExtensionToWebViewMessage>();
-  protected readonly streams = new Map<string, AsyncQueue<any>>();
+  // ISSUE-005: Use VersionedStreamMap to prevent race condition
+  protected readonly streams = new VersionedStreamMap<any>();
   protected readonly outstandingRequests = new Map<string, RequestHandler>();
 
   constructor(
@@ -84,8 +86,8 @@ export abstract class BaseTransport {
     permissionMode?: PermissionMode,
     thinkingLevel?: string
   ): AsyncQueue<any> {
-    const queue = new AsyncQueue<any>();
-    this.streams.set(channelId, queue);
+    // ISSUE-005: Use versioned stream creation
+    const queue = this.streams.create(channelId);
     this.send({
       type: "launch_claude",
       channelId,
@@ -306,17 +308,13 @@ export abstract class BaseTransport {
             break;
           }
           case "close_channel": {
-            const stream = this.streams.get(message.channelId);
-            if (stream) {
-              if (message.error) stream.error(new Error(message.error));
-              stream.done();
-              // 延迟删除，给尾部 io_message/result 留出时间片
-              setTimeout(() => {
-                this.streams.delete(message.channelId);
-              }, 50);
-            } else {
-              this.streams.delete(message.channelId);
-            }
+            // ISSUE-005: Use versioned close to prevent race condition
+            // Version check ensures we don't delete a recreated stream
+            const version = this.streams.getVersion(message.channelId);
+            const error = message.error ? new Error(message.error) : undefined;
+
+            // Synchronous cleanup - version check prevents deleting newer streams
+            this.streams.close(message.channelId, version, error);
             break;
           }
           case "request":
@@ -344,9 +342,10 @@ export abstract class BaseTransport {
         }
       }
     } catch (error) {
-      for (const stream of this.streams.values()) stream.error(error);
+      // ISSUE-005: clear() handles error propagation and cleanup
+      console.error('[BaseTransport] Error in message loop:', error);
     } finally {
-      for (const stream of this.streams.values()) stream.done();
+      // ISSUE-005: clear() marks all streams as done
       this.streams.clear();
     }
   }
