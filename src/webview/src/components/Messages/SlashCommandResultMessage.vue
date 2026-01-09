@@ -15,12 +15,12 @@ import type { SlashCommandResultBlock } from '../../models/ContentBlock';
 
 interface Props {
   message: Message;
-  context?: any; // MessageRenderer 会传递，需声明以避免渲染到 DOM
+  context?: any; // Passed by MessageRenderer, must be declared to avoid rendering to DOM
 }
 
 const props = defineProps<Props>();
 
-// 提取 SlashCommandResultBlock 数据
+// Extract SlashCommandResultBlock data
 const resultBlock = computed<SlashCommandResultBlock | null>(() => {
   const content = props.message.message.content;
   if (Array.isArray(content) && content.length === 1) {

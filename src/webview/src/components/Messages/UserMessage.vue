@@ -6,7 +6,7 @@
         class="message-content"
         :class="{ editing: isEditing }"
       >
-        <!-- 普通显示模式 -->
+        <!-- Normal display mode -->
         <div
           v-if="!isEditing"
           class="message-view"
@@ -28,7 +28,7 @@
           </div>
         </div>
 
-        <!-- 编辑模式 -->
+        <!-- Edit mode -->
         <div v-else class="edit-mode">
           <ChatInputBox
             :show-progress="false"
@@ -65,12 +65,12 @@ const chatInputRef = ref<InstanceType<typeof ChatInputBox>>();
 const containerRef = ref<HTMLElement>();
 const attachments = ref<AttachmentItem[]>([]);
 
-// 显示内容（纯文本）
+// Display content (plain text)
 const displayContent = computed(() => {
   if (typeof props.message.message.content === 'string') {
     return props.message.message.content;
   }
-  // 如果是 content blocks，提取文本
+  // If it's content blocks, extract text
   if (Array.isArray(props.message.message.content)) {
     return props.message.message.content
       .map(wrapper => {
@@ -85,7 +85,7 @@ const displayContent = computed(() => {
   return '';
 });
 
-// 从消息内容中提取附件（image 和 document blocks）
+// Extract attachments from message content (image and document blocks)
 function extractAttachments(): AttachmentItem[] {
   if (typeof props.message.message.content === 'string') {
     return [];
@@ -108,7 +108,7 @@ function extractAttachments(): AttachmentItem[] {
         fileName: `image.${ext}`,
         mediaType: block.source.media_type || 'image/png',
         data: block.source.data,
-        fileSize: 0, // 历史消息无法获取原始大小
+        fileSize: 0, // Cannot get original size from historical messages
       });
     } else if (block.type === 'document' && block.source) {
       const title = block.title || 'document';
@@ -128,10 +128,10 @@ function extractAttachments(): AttachmentItem[] {
 async function startEditing() {
   isEditing.value = true;
 
-  // 提取附件
+  // Extract attachments
   attachments.value = extractAttachments();
 
-  // 等待 DOM 更新后设置输入框内容和焦点
+  // Wait for DOM update then set input box content and focus
   await nextTick();
   if (chatInputRef.value) {
     chatInputRef.value.setContent?.(displayContent.value || '');
@@ -145,14 +145,14 @@ function handleRemoveAttachment(id: string) {
 
 function cancelEdit() {
   isEditing.value = false;
-  attachments.value = []; // 清空附件列表
+  attachments.value = []; // Clear attachments list
 }
 
 function handleSaveEdit(content?: string) {
   const finalContent = content || displayContent.value;
 
   if (finalContent.trim() && finalContent !== displayContent.value) {
-    // TODO: 调用 session.send() 发送编辑后的消息
+    // TODO: Call session.send() to send the edited message
     console.log('[UserMessage] Save edit:', finalContent.trim());
   }
 
@@ -160,11 +160,11 @@ function handleSaveEdit(content?: string) {
 }
 
 function handleRestore() {
-  // TODO: 实现 restore checkpoint 逻辑
+  // TODO: Implement restore checkpoint logic
   console.log('[UserMessage] Restore checkpoint clicked');
 }
 
-// 监听键盘事件
+// Listen for keyboard events
 function handleKeydown(event: KeyboardEvent) {
   if (isEditing.value && event.key === 'Escape') {
     event.preventDefault();
@@ -172,20 +172,20 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
-// 监听点击外部取消编辑
+// Listen for clicks outside to cancel editing
 function handleClickOutside(event: MouseEvent) {
   if (!isEditing.value) return;
 
   const target = event.target as HTMLElement;
 
-  // 检查是否点击了组件内部
+  // Check if clicked inside the component
   if (containerRef.value?.contains(target)) return;
 
-  // 点击外部，取消编辑
+  // Clicked outside, cancel editing
   cancelEdit();
 }
 
-// 生命周期管理
+// Lifecycle management
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown);
   document.addEventListener('click', handleClickOutside);
@@ -210,7 +210,7 @@ onUnmounted(() => {
   background-color: transparent;
 }
 
-/* 消息内容容器 - 负责背景色和圆角 */
+/* Message content container - responsible for background color and border radius */
 .message-content {
   display: flex;
   align-items: flex-start;
@@ -234,7 +234,7 @@ onUnmounted(() => {
   background-color: transparent;
 }
 
-/* 普通显示模式 */
+/* Normal display mode */
 .message-view {
   display: flex;
   flex-direction: column;
@@ -320,7 +320,7 @@ onUnmounted(() => {
   color: var(--vscode-foreground);
 }
 
-/* 编辑模式 */
+/* Edit mode */
 .edit-mode {
   display: flex;
   flex-direction: column;
@@ -331,7 +331,7 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-/* 编辑模式下的特定样式覆盖 */
+/* Specific style overrides in edit mode */
 .edit-mode :deep(.full-input-box) {
   background: var(--vscode-input-background);
 }

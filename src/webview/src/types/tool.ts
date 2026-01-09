@@ -1,6 +1,6 @@
 /**
- * Tool UI 上下文接口
- * 用于 Tool 渲染时访问文件操作等功能
+ * Tool UI context interface
+ * Used to access file operations and other functions during Tool rendering
  */
 export interface ToolContext {
   fileOpener: {
@@ -10,15 +10,15 @@ export interface ToolContext {
 }
 
 /**
- * Tool 权限请求渲染器接口
- * 不同的 Tool 可以实现自定义的权限请求 UI
+ * Tool permission request renderer interface
+ * Different Tools can implement custom permission request UI
  */
 export interface ToolPermissionRenderer {
   /**
-   * 渲染权限请求 UI
-   * @param context Tool 上下文
-   * @param inputs Tool 输入参数
-   * @param onModify 修改输入的回调
+   * Render permission request UI
+   * @param context Tool context
+   * @param inputs Tool input parameters
+   * @param onModify Callback to modify inputs
    */
   renderPermissionRequest(
     context: ToolContext,

@@ -2,22 +2,22 @@ import type { Ref, ComputedRef } from 'vue'
 import type { DropdownItemType } from './dropdown'
 
 /**
- * 触发查询信息
- * 记录触发符、查询文本和位置范围
+ * Trigger query information
+ * Records trigger character, query text and position range
  */
 export interface TriggerQuery {
-  /** 查询文本（不包括触发符） */
+  /** Query text (excluding trigger character) */
   query: string
-  /** 触发符在文本中的起始位置 */
+  /** Start position of trigger character in text */
   start: number
-  /** 查询结束位置 */
+  /** Query end position */
   end: number
-  /** 触发符（如 '/' 或 '@'） */
+  /** Trigger character (e.g., '/' or '@') */
   trigger: string
 }
 
 /**
- * Dropdown 位置信息
+ * Dropdown position information
  */
 export interface DropdownPosition {
   top: number
@@ -27,142 +27,142 @@ export interface DropdownPosition {
 }
 
 /**
- * 补全模式
- * - inline: 输入触发（如 /command, @file）
- * - manual: 手动触发（如按钮点击）
+ * Completion mode
+ * - inline: Input triggered (e.g., /command, @file)
+ * - manual: Manually triggered (e.g., button click)
  */
 export type CompletionMode = 'inline' | 'manual'
 
 /**
- * 补全配置选项
+ * Completion configuration options
  */
 export interface CompletionConfig<T> {
-  /** 补全模式 */
+  /** Completion mode */
   mode: CompletionMode
 
-  /** 触发符（inline 模式必需，如 '/' 或 '@'） */
+  /** Trigger character (required for inline mode, e.g., '/' or '@') */
   trigger?: string
 
-  /** 数据提供者函数（支持可选的 AbortSignal 用于取消请求） */
+  /** Data provider function (supports optional AbortSignal for request cancellation) */
   provider: (query: string, signal?: AbortSignal) => Promise<T[]> | T[]
 
-  /** 将数据项转换为 DropdownItem 格式 */
+  /** Convert data item to DropdownItem format */
   toDropdownItem: (item: T) => DropdownItemType
 
-  /** 选择项的回调 */
+  /** Callback when item is selected */
   onSelect: (item: T, query?: TriggerQuery) => void
 
-  /** 定位锚点元素（用于计算 dropdown 位置） */
+  /** Anchor element for positioning (used to calculate dropdown position) */
   anchorElement?: Ref<HTMLElement | null>
 
-  /** 是否显示分组标题（manual 模式） */
+  /** Whether to show section headers (manual mode) */
   showSectionHeaders?: boolean
 
-  /** 搜索字段列表（用于过滤，manual 模式） */
+  /** List of search fields (for filtering, manual mode) */
   searchFields?: string[]
 
-  /** 命令分组顺序（manual 模式，可选） */
+  /** Command section order (manual mode, optional) */
   sectionOrder?: readonly string[]
 }
 
 /**
- * 补全 Dropdown 返回值
+ * Completion dropdown return value
  */
 export interface CompletionDropdown {
-  /** 是否打开 */
+  /** Whether open */
   isOpen: Ref<boolean>
 
-  /** Dropdown 项列表 */
+  /** Dropdown items list */
   items: ComputedRef<DropdownItemType[]>
 
-  /** 当前激活的索引 */
+  /** Current active index */
   activeIndex: Ref<number>
 
-  /** Dropdown 位置 */
+  /** Dropdown position */
   position: ComputedRef<DropdownPosition>
 
-  /** 当前查询文本 */
+  /** Current query text */
   query: Ref<string>
 
-  /** 当前触发查询信息（inline 模式） */
+  /** Current trigger query info (inline mode) */
   triggerQuery: Ref<TriggerQuery | undefined>
 
-  /** 导航模式 */
+  /** Navigation mode */
   navigationMode: Ref<'keyboard' | 'mouse'>
 
-  /** 打开 dropdown */
+  /** Open dropdown */
   open: () => void
 
-  /** 关闭 dropdown */
+  /** Close dropdown */
   close: () => void
 
-  /** 键盘事件处理 */
+  /** Keyboard event handler */
   handleKeydown: (event: KeyboardEvent) => void
 
-  /** 选择当前激活项（用于点击触发等） */
+  /** Select current active item (for click trigger, etc.) */
   selectActive: () => void
 
-  /** 按索引选择项（用于点击触发等） */
+  /** Select item by index (for click trigger, etc.) */
   selectIndex: (index: number) => void
 
-  /** 搜索处理（manual 模式） */
+  /** Search handler (manual mode) */
   handleSearch: (term: string) => void
 
-  /** 评估查询（inline 模式内部使用） */
+  /** Evaluate query (internal use for inline mode) */
   evaluateQuery: (text: string, caretOffset?: number) => void
 
-  /** 文本替换（inline 模式） */
+  /** Text replacement (inline mode) */
   replaceText: (text: string, replacement: string) => string
 
-  /** 鼠标进入项（切换为 mouse 模式） */
+  /** Mouse enter item (switch to mouse mode) */
   handleMouseEnter: (index: number) => void
 
-  /** 鼠标离开菜单（复位索引） */
+  /** Mouse leave menu (reset index) */
   handleMouseLeave: () => void
 
-  /** 手动更新位置 */
+  /** Manually update position */
   updatePosition: (pos: DropdownPosition) => void
 }
 
 /**
- * 键盘导航选项
+ * Keyboard navigation options
  */
 export interface KeyboardNavigationOptions {
-  /** 是否打开 */
+  /** Whether open */
   isOpen: Ref<boolean>
 
-  /** 项列表 */
+  /** Items list */
   items: ComputedRef<any[]>
 
-  /** 当前激活的索引 */
+  /** Current active index */
   activeIndex: Ref<number>
 
-  /** 选择当前项的回调 */
+  /** Callback when current item is selected */
   onSelect: (index: number) => void
 
-  /** 关闭的回调 */
+  /** Callback when closed */
   onClose: () => void
 
-  /** 是否支持 Tab 键选择 */
+  /** Whether Tab key selection is supported */
   supportTab?: boolean
 
-  /** 是否支持 Escape 键关闭 */
+  /** Whether Escape key close is supported */
   supportEscape?: boolean
 
-  /** 导航发生时的回调（用于切换导航模式） */
+  /** Callback when navigation occurs (for switching navigation mode) */
   onNavigate?: () => void
 
-  /** 翻页大小（默认 5） */
+  /** Page size (default 5) */
   pageSize?: number
 }
 
 /**
- * 触发检测选项
+ * Trigger detection options
  */
 export interface TriggerDetectionOptions {
-  /** 触发符 */
+  /** Trigger character */
   trigger: string
 
-  /** 自定义正则表达式（可选） */
+  /** Custom regular expression (optional) */
   customRegex?: RegExp
 }

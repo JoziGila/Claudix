@@ -1,4 +1,4 @@
-// 消息队列类型定义
+// Message queue type definitions
 
 export interface QueuedMessage {
   id: string

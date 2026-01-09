@@ -26,7 +26,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// 根据消息类型选择渲染组件
+// Select rendering component based on message type
 const messageComponent = computed(() => {
   switch (props.message.type) {
     case 'user':

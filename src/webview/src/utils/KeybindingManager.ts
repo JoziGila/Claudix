@@ -31,7 +31,7 @@ export class KeybindingManager {
     const id = this.nextId++
     const b: InternalBinding = { id, priority: 0, ...binding }
     this.bindings.push(b)
-    // 保持按优先级降序
+    // Keep sorted by priority in descending order
     this.bindings.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))
     return () => this.unregister(id)
   }
@@ -49,10 +49,10 @@ export class KeybindingManager {
       if (!b.allowInEditable && isEditableTarget(e.target)) continue
       if (b.when && !b.when()) continue
 
-      // 执行
+      // Execute
       try {
         if (b.handler) b.handler()
-        // command 的执行留给调用方在 handler 里调用 runtime.registry
+        // Command execution is left to the caller to invoke runtime.registry in the handler
       } catch {}
 
       e.preventDefault()

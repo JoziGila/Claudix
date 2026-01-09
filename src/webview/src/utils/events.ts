@@ -1,21 +1,21 @@
 /**
- * EventEmitter - 简单的事件发射器
+ * EventEmitter - Simple event emitter
  *
- * 用于管理事件回调的注册和触发
- * 主要用于 Tool 请求/响应的回调管理和会话状态变更通知
+ * Used to manage event callback registration and triggering
+ * Primarily used for Tool request/response callback management and session state change notifications
  */
 export class EventEmitter<T = any> {
     private callbacks: Array<(data: T) => void> = [];
 
     /**
-     * 添加事件监听器
-     * @param callback 回调函数
-     * @returns 取消订阅函数
+     * Add event listener
+     * @param callback Callback function
+     * @returns Unsubscribe function
      */
     add(callback: (data: T) => void): () => void {
         this.callbacks.push(callback);
 
-        // 返回取消订阅函数
+        // Return unsubscribe function
         return () => {
             const index = this.callbacks.indexOf(callback);
             if (index !== -1) {
@@ -25,8 +25,8 @@ export class EventEmitter<T = any> {
     }
 
     /**
-     * 触发事件，通知所有监听器
-     * @param data 事件数据
+     * Emit event, notify all listeners
+     * @param data Event data
      */
     emit(data: T): void {
         for (const callback of this.callbacks) {
@@ -39,14 +39,14 @@ export class EventEmitter<T = any> {
     }
 
     /**
-     * 清除所有监听器
+     * Clear all listeners
      */
     clear(): void {
         this.callbacks = [];
     }
 
     /**
-     * 获取监听器数量
+     * Get listener count
      */
     get listenerCount(): number {
         return this.callbacks.length;
