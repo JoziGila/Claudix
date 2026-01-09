@@ -68,6 +68,7 @@
             :permission-mode="session?.permissionMode.value"
             :selected-model="session?.modelSelection.value"
             @submit="handleSubmit"
+            @queue-message="queueMessage"
             @stop="handleStop"
             @add-attachment="handleAddAttachment"
             @remove-attachment="handleRemoveAttachment"
@@ -75,6 +76,14 @@
             @mode-select="handleModeSelect"
             @model-select="handleModelSelect"
           />
+          <!-- Queue indicator (ISSUE-001) -->
+          <div v-if="pendingMessages.length > 0" class="queue-indicator">
+            <span class="codicon codicon-history"></span>
+            <span>{{ pendingMessages.length }} message(s) queued</span>
+            <button class="queue-clear-btn" @click="clearQueue" title="Clear queue">
+              <span class="codicon codicon-close"></span>
+            </button>
+          </div>
         </div>
       <!-- </div> -->
     </div>
@@ -85,6 +94,7 @@
   import { ref, computed, inject, onMounted, onUnmounted, nextTick, watch } from 'vue';
   import { RuntimeKey } from '../composables/runtimeContext';
   import { useSession } from '../composables/useSession';
+  import { useMessageQueue } from '../composables/useMessageQueue';
   import type { Session } from '../core/Session';
   import type { PermissionRequest } from '../core/PermissionRequest';
   import type { ToolContext } from '../types/tool';
@@ -133,6 +143,12 @@
   const title = computed(() => session.value?.summary.value || 'New Conversation');
   const messages = computed<any[]>(() => session.value?.messages.value ?? []);
   const isBusy = computed(() => session.value?.busy.value ?? false);
+
+  // Message queue for handling user input while Claude is responding (ISSUE-001)
+  const { pendingMessages, queueMessage, clearQueue } = useMessageQueue(
+    isBusy,
+    handleSubmit
+  );
   const permissionMode = computed(
     () => session.value?.permissionMode.value ?? 'default'
   );
@@ -543,5 +559,43 @@
     align-items: center;
     justify-content: center;
     margin-bottom: 24px;
+  }
+
+  /* Queue indicator styles (ISSUE-001) */
+  .queue-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    margin-top: 8px;
+    background: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    font-size: 12px;
+    border-radius: 4px;
+  }
+
+  .queue-indicator .codicon {
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .queue-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    padding: 2px;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    opacity: 0.7;
+    transition: opacity 0.15s, background-color 0.15s;
+  }
+
+  .queue-clear-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
   }
 </style>
