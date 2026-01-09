@@ -98,7 +98,7 @@ export class AppContext {
 
   constructor(private readonly connectionManager: ConnectionManager) {}
 
-  // 文件打开能力
+  // File opening capabilities
   readonly fileOpener = {
     open: async (filePath: string, location?: any) => {
       const connection = await this.connectionManager.get();

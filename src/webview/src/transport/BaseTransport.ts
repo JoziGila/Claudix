@@ -27,8 +27,8 @@ interface RequestHandler {
 }
 
 /**
- * WebView ↔ Extension 传输抽象基类
- * - 使用 alien-signals 管理状态（统一架构）
+ * WebView ↔ Extension Transport Abstract Base Class
+ * - Uses alien-signals for state management (unified architecture)
  */
 export abstract class BaseTransport {
   readonly state = signal<ConnectionState>("connecting");

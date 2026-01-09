@@ -178,7 +178,7 @@ export class Session {
     session.lastModifiedTime(summary.lastModified);
     session.summary(summary.summary);
     session.worktree(summary.worktree);
-    session.messageCount(summary.messageCount ?? 0);  // 保存服务器返回的消息数量
+    session.messageCount(summary.messageCount ?? 0);  // Save message count from server
     return session;
   }
 
@@ -215,11 +215,11 @@ export class Session {
       const accumulator: Message[] = [];
       for (const raw of response?.messages ?? []) {
         this.processMessage(raw);
-        // 使用 processAndAttachMessage 来绑定 tool_result
-        // 这样历史消息中的 tool_result 也会正确绑定到 tool_use
+        // Use processAndAttachMessage to bind tool_result
+        // This ensures historical tool_results are correctly bound to tool_use
         processAndAttachMessage(accumulator, raw);
       }
-      // 移除 ReadCoalesced 合并逻辑
+      // Removed ReadCoalesced merge logic
       // this.messages(mergeConsecutiveReadMessages(accumulator));
       this.messages(accumulator);
       await this.launchClaude();
@@ -235,11 +235,12 @@ export class Session {
   ): Promise<void> {
     const connection = await this.getConnection();
 
-    // 官方路线：不在 slash 命令时临时切换 thinkingLevel，保持会话一致性，
-    // 由 SDK/服务端在 assistant 消息中提供 thinking/redacted_thinking 块以满足约束
+    // Official approach: don't temporarily switch thinkingLevel for slash commands,
+    // maintain session consistency. SDK/server provides thinking/redacted_thinking
+    // blocks in assistant messages to satisfy constraints
     const isSlash = this.isSlashCommand(input);
 
-    // 启动 channel（确保已带上当前 thinkingLevel）
+    // Launch channel (ensure current thinkingLevel is included)
     await this.launchClaude();
 
     const shouldIncludeSelection = includeSelection && !isSlash;
@@ -428,7 +429,7 @@ export class Session {
     }
 
     return connection.permissionRequested.add((request) => {
-      // 动态获取当前 channelId，避免闭包捕获旧值
+      // Dynamically get current channelId to avoid closure capturing stale value
       if (request.channelId === this.claudeChannelId()) {
         callback(request);
       }
@@ -537,7 +538,7 @@ export class Session {
   }
 
   /**
-   * 处理特殊消息（TodoWrite, usage 统计）
+   * Process special messages (TodoWrite, usage statistics)
    */
   private processMessage(event: any): void {
     if (
@@ -545,7 +546,7 @@ export class Session {
       event.message?.content &&
       Array.isArray(event.message.content)
     ) {
-      // 处理 TodoWrite
+      // Process TodoWrite
       for (const block of event.message.content) {
         if (
           block.type === 'tool_use' &&
@@ -558,7 +559,7 @@ export class Session {
         }
       }
 
-      // 处理 usage 统计
+      // Process usage statistics
       if (event.message.usage) {
         this.updateUsage(event.message.usage);
       }
@@ -566,7 +567,7 @@ export class Session {
   }
 
   /**
-   * 更新 token 使用统计
+   * Update token usage statistics
    */
   private updateUsage(usage: any): void {
     const totalTokens =

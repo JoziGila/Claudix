@@ -1,6 +1,6 @@
 <template>
   <div class="chat-page">
-    <!-- 顶部标题栏 -->
+    <!-- Top title bar -->
     <div class="chat-header">
       <div class="header-left">
         <button class="menu-btn" @click="$emit('switchToSessions')">
@@ -9,13 +9,13 @@
         <h2 class="chat-title">{{ title }}</h2>
       </div>
       <div class="header-right">
-        <button class="new-chat-btn" title="新开对话" @click="createNew">
+        <button class="new-chat-btn" title="New conversation" @click="createNew">
           <span class="codicon codicon-plus"></span>
         </button>
       </div>
     </div>
 
-    <!-- 主体：消息容器 -->
+    <!-- Main body: message container -->
     <div class="main">
       <!-- <div class="chatContainer"> -->
         <div
@@ -128,18 +128,18 @@
     },
   }));
 
-  // 订阅 activeSession（alien-signal → Vue ref）
+  // Subscribe to activeSession (alien-signal → Vue ref)
   const activeSessionRaw = useSignal<Session | undefined>(
     runtime.sessionStore.activeSession
   );
 
-  // 使用 useSession 将 alien-signals 转换为 Vue Refs
+  // Use useSession to convert alien-signals to Vue Refs
   const session = computed(() => {
     const raw = activeSessionRaw.value;
     return raw ? useSession(raw) : null;
   });
 
-  // 现在所有访问都使用 Vue Ref（.value）
+  // Now all accesses use Vue Ref (.value)
   const title = computed(() => session.value?.summary.value || 'New Conversation');
   const messages = computed<any[]>(() => session.value?.messages.value ?? []);
   const isBusy = computed(() => session.value?.busy.value ?? false);
@@ -159,9 +159,9 @@
   const pendingPermission = computed(() => permissionRequests.value[0] as any);
   const platform = computed(() => runtime.appContext.platform);
 
-  // 注册命令：permissionMode.toggle（在下方定义函数后再注册）
+  // Register command: permissionMode.toggle (registered after function defined below)
 
-  // 估算 Token 使用占比（基于 usageData）
+  // Estimate token usage percentage (based on usageData)
   const progressPercentage = computed(() => {
     const s = session.value;
     if (!s) return 0;
@@ -181,10 +181,10 @@
   const containerEl = ref<HTMLDivElement | null>(null);
   const endEl = ref<HTMLDivElement | null>(null);
 
-  // 附件状态管理
+  // Attachment state management
   const attachments = ref<AttachmentItem[]>([]);
 
-  // 记录上次消息数量，用于判断是否需要滚动
+  // Record previous message count for scroll decision
   let prevCount = 0;
 
   function stringify(m: any): string {
@@ -206,7 +206,7 @@
   }
 
   watch(session, async () => {
-    // 切换会话：复位并滚动底部
+    // Switch session: reset and scroll to bottom
     prevCount = 0;
     await nextTick();
     scrollToBottom();
@@ -227,7 +227,7 @@
   );
 
   watch(permissionRequestsLen, async () => {
-    // 有权限请求出现时也确保滚动到底部
+    // Scroll to bottom when permission requests appear
     await nextTick();
     scrollToBottom();
   });
@@ -245,33 +245,33 @@
   async function createNew(): Promise<void> {
     if (!runtime) return;
 
-    // 1. 先尝试通过 appContext.startNewConversationTab 创建新标签（多标签模式）
+    // 1. First try to create new tab via appContext.startNewConversationTab (multi-tab mode)
     if (runtime.appContext.startNewConversationTab()) {
       return;
     }
 
-    // 2. 如果不是多标签模式，检查当前会话是否为空
+    // 2. If not multi-tab mode, check if current session is empty
     const currentMessages = messages.value;
     if (currentMessages.length === 0) {
-      // 当前已经是空会话，无需创建新会话
+      // Current session is already empty, no need to create new session
       return;
     }
 
-    // 3. 当前会话有内容，创建新会话
+    // 3. Current session has content, create new session
     await runtime.sessionStore.createSession({ isExplicit: true });
   }
 
-  // ChatInput 事件处理
+  // ChatInput event handling
   async function handleSubmit(content: string) {
     const s = session.value;
     const trimmed = (content || '').trim();
     if (!s || (!trimmed && attachments.value.length === 0) || isBusy.value) return;
 
     try {
-      // 传递附件给 send 方法
+      // Pass attachments to send method
       await s.send(trimmed || ' ', attachments.value);
 
-      // 发送成功后清空附件
+      // Clear attachments after successful send
       attachments.value = [];
     } catch (e) {
       console.error('[ChatPage] send failed', e);
@@ -295,7 +295,7 @@
     await s.setPermissionMode(mode);
   }
 
-  // permissionMode.toggle：按固定顺序轮转
+  // permissionMode.toggle: cycle in fixed order
   const togglePermissionMode = () => {
     const s = session.value;
     if (!s) return;
@@ -306,7 +306,7 @@
     void s.setPermissionMode(next);
   };
 
-  // 现在注册命令（toggle 已定义）
+  // Now register command (toggle already defined)
   const unregisterToggle = runtime.appContext.commandRegistry.registerAction(
     {
       id: 'permissionMode.toggle',
@@ -319,7 +319,7 @@
     }
   );
 
-  // 注册快捷键：shift+tab → permissionMode.toggle（允许在输入区生效）
+  // Register shortcut: shift+tab → permissionMode.toggle (allow in editable areas)
   useKeybinding({
     keys: 'shift+tab',
     handler: togglePermissionMode,
@@ -337,7 +337,7 @@
   function handleStop() {
     const s = session.value;
     if (s) {
-      // 方法已经在 useSession 中绑定，可以直接调用
+      // Method already bound in useSession, can call directly
       void s.interrupt();
     }
   }
@@ -346,12 +346,12 @@
     if (!files || files.length === 0) return;
 
     try {
-      // 将所有文件转换为 AttachmentItem
+      // Convert all files to AttachmentItem
       const conversions = await Promise.all(
         Array.from(files).map(convertFileToAttachment)
       );
 
-      // 添加到附件列表
+      // Add to attachments list
       attachments.value = [...attachments.value, ...conversions];
 
       console.log('[ChatPage] Added attachments:', conversions.map(a => a.fileName));
@@ -473,7 +473,7 @@
     overflow: hidden;
   }
 
-  /* Chat 容器与消息滚动容器（对齐 React） */
+  /* Chat container and message scroll container (aligned with React) */
   .chatContainer {
     position: relative;
     height: 100%;
@@ -527,14 +527,14 @@
     color: var(--vscode-editor-foreground);
   }
 
-  /* 其他样式复用 */
+  /* Other style reuse */
 
-  /* 输入区域容器 */
+  /* Input area container */
   .inputContainer {
     padding: 8px 12px 12px;
   }
 
-  /* 底部对话框区域钉在底部 */
+  /* Dialog area pinned to bottom */
   .main > :last-child {
     flex-shrink: 0;
     background-color: var(--vscode-sideBar-background);
@@ -544,7 +544,7 @@
     align-self: center;
   }
 
-  /* 空状态样式 */
+  /* Empty state styles */
   .emptyState {
     display: flex;
     flex-direction: column;
