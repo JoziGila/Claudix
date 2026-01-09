@@ -2,12 +2,14 @@
   <!-- Pass wrapper to blocks that need reactive streaming/toolResult access -->
   <!-- tool_use: needs wrapper for toolResult Signal -->
   <!-- text/thinking: needs wrapper for streaming text Signal -->
+  <!-- ISSUE-021: Pass showPrefix to TextBlock for correct dot positioning -->
   <component
     v-if="needsWrapper"
     :is="blockComponent"
     :block="block"
     :wrapper="wrapper"
     :context="context"
+    :show-prefix="block.type === 'text' ? showPrefix : undefined"
   />
   <!-- Other types don't need wrapper -->
   <component
@@ -41,6 +43,7 @@ interface Props {
   block: ContentBlockType;
   context?: ToolContext;
   wrapper?: ContentBlockWrapper;
+  showPrefix?: boolean; // ISSUE-021: Whether to show the prefix dot
 }
 
 const props = defineProps<Props>();

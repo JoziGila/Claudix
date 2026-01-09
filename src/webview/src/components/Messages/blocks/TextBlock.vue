@@ -1,5 +1,6 @@
 <template>
-  <div class="text-block">
+  <!-- ISSUE-021: Add with-prefix class when this is the first text block -->
+  <div class="text-block" :class="{ 'with-prefix': showPrefix }">
     <div :class="markdownClasses">
       <MarkdownContent :content="displayText" :final="!isStreaming" />
     </div>
@@ -18,6 +19,7 @@ interface Props {
   block: TextBlockType;
   context?: ToolContext;
   wrapper?: ContentBlockWrapper;
+  showPrefix?: boolean; // ISSUE-021: Whether to show the prefix dot
 }
 
 const props = defineProps<Props>();
@@ -46,6 +48,18 @@ const markdownClasses = computed(() => {
 .text-block {
   margin: 0;
   padding: 0px 2px;
+  position: relative;
+}
+
+/* ISSUE-021: Prefix dot rendered by first text block, not container */
+.text-block.with-prefix::before {
+  content: "\25cf";
+  position: absolute;
+  left: -16px;
+  top: 10px; /* Align with first line of text */
+  font-size: 10px;
+  color: var(--vscode-input-border);
+  z-index: 1;
 }
 
 .markdown-content {

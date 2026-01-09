@@ -7,15 +7,22 @@
     </div>
 
     <template v-if="typeof message.message.content === 'string'">
-      <ContentBlock :block="{ type: 'text', text: message.message.content }" :context="context" />
+      <!-- ISSUE-021: String content always shows prefix -->
+      <ContentBlock
+        :block="{ type: 'text', text: message.message.content }"
+        :context="context"
+        :show-prefix="showPrefixOnText"
+      />
     </template>
     <template v-else>
+      <!-- ISSUE-021: Only first text block gets the prefix dot -->
       <ContentBlock
         v-for="(wrapper, index) in message.message.content"
         :key="index"
         :block="wrapper.content"
         :wrapper="wrapper"
         :context="context"
+        :show-prefix="showPrefixOnText && index === firstTextBlockIndex"
       />
     </template>
   </div>
@@ -39,10 +46,24 @@ const props = defineProps<Props>();
 const isStreaming = useSignal(props.message.isStreaming);
 const isInterrupted = useSignal(props.message.isInterrupted);
 
+// ISSUE-021: Find the index of the first text block
+const firstTextBlockIndex = computed(() => {
+  const content = props.message.message.content;
+  if (!Array.isArray(content)) return 0;
+  return content.findIndex(wrapper => wrapper.content.type === 'text');
+});
+
+// ISSUE-021: Determine if we should show prefix on text blocks
+// Only show prefix for messages without tool_use
+const showPrefixOnText = computed(() => {
+  const content = props.message.message.content;
+  if (!Array.isArray(content)) return true;
+  return !content.some(wrapper => wrapper.content.type === 'tool_use');
+});
+
 // Compute dynamic classes
 const messageClasses = computed(() => {
   const classes: string[] = [];
-  const content = props.message.message.content;
 
   // Add streaming class for pulsing indicator
   if (isStreaming.value) {
@@ -54,14 +75,7 @@ const messageClasses = computed(() => {
     classes.push('interrupted');
   }
 
-  // content is always array, check if contains tool_use
-  if (Array.isArray(content)) {
-    const hasToolUse = content.some(wrapper => wrapper.content.type === 'tool_use');
-    // Only show dot prefix for text-only messages (no tool_use)
-    if (!hasToolUse) {
-      classes.push('prefix');
-    }
-  }
+  // ISSUE-021: Removed 'prefix' class - dot is now rendered by TextBlock
 
   return classes;
 });
@@ -82,16 +96,7 @@ const messageClasses = computed(() => {
   position: relative;
 }
 
-/* Only show dot prefix for text-only messages */
-.assistant-message.prefix::before {
-  content: "\25cf";
-  position: absolute;
-  left: 8px;
-  padding-top: 2px;
-  font-size: 10px;
-  color: var(--vscode-input-border);
-  z-index: 1;
-}
+/* ISSUE-021: Prefix dot is now rendered by TextBlock, not here */
 
 /* Streaming state - subtle pulsing indicator */
 .assistant-message.streaming::after {
