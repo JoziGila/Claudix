@@ -1,5 +1,5 @@
 /**
- * 终端服务 / Terminal Service
+ * Terminal Service
  */
 
 import * as vscode from 'vscode';

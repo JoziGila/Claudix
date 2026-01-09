@@ -1,5 +1,5 @@
 /**
- * 工作区服务 / Workspace Service
+ * Workspace Service
  */
 
 import * as vscode from 'vscode';
@@ -11,22 +11,22 @@ export interface IWorkspaceService {
 	readonly _serviceBrand: undefined;
 
 	/**
-	 * 获取所有工作区文件夹
+	 * Get all workspace folders
 	 */
 	getWorkspaceFolders(): readonly vscode.WorkspaceFolder[] | undefined;
 
 	/**
-	 * 根据 URI 获取对应的工作区文件夹
+	 * Get workspace folder for a given URI
 	 */
 	getWorkspaceFolder(uri: vscode.Uri): vscode.WorkspaceFolder | undefined;
 
 	/**
-	 * 获取默认（第一个）工作区文件夹
+	 * Get default (first) workspace folder
 	 */
 	getDefaultWorkspaceFolder(): vscode.WorkspaceFolder | undefined;
 
 	/**
-	 * 工作区变更事件
+	 * Workspace change event
 	 */
 	onDidChangeWorkspaceFolders: vscode.Event<vscode.WorkspaceFoldersChangeEvent>;
 }

@@ -1,5 +1,5 @@
 /**
- * 通知服务 / Notification Service
+ * Notification Service
  */
 
 import * as vscode from 'vscode';

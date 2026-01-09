@@ -1,5 +1,5 @@
 /**
- * 编辑器标签服务 / Tabs and Editors Service
+ * Tabs and Editors Service
  */
 
 import * as vscode from 'vscode';
