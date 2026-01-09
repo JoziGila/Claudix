@@ -1,16 +1,52 @@
 /**
- * AsyncStream - 手动控制的异步迭代器
+ * AsyncStream - Single-use async iterator for producer/consumer patterns (ISSUE-006)
  *
- * 实现生产者-消费者模式，用于：
- * 1. Extension 接收来自 WebView 的消息
- * 2. Extension 向 SDK 发送用户消息
- * 3. WebView 接收来自 Extension 的消息
+ * IMPORTANT: This stream can only be iterated ONCE.
+ * Once consumed, the values are gone - this is by design for streaming data.
  *
- * 特点：
- * - 支持异步迭代 (for await...of)
- * - 自动背压控制（队列缓冲）
- * - 可手动结束流
- * - 支持错误传播
+ * Use cases:
+ * 1. Extension receives messages from WebView
+ * 2. Extension sends user messages to SDK
+ * 3. WebView receives messages from Extension
+ *
+ * Features:
+ * - Async iteration support (for await...of)
+ * - Automatic backpressure via queue buffering
+ * - Manual stream completion
+ * - Error propagation
+ *
+ * If you need to:
+ * - Re-read values: Collect into array during first iteration
+ * - Share with multiple consumers: Use a tee/broadcast pattern
+ *
+ * @example Single iteration (correct)
+ * ```typescript
+ * const stream = new AsyncStream<string>();
+ * stream.enqueue('value1');
+ * stream.enqueue('value2');
+ * stream.done();
+ *
+ * // Iterate once
+ * for await (const value of stream) {
+ *   console.log(value);
+ * }
+ * ```
+ *
+ * @example Collecting for reuse (correct)
+ * ```typescript
+ * const values: string[] = [];
+ * for await (const value of stream) {
+ *   values.push(value);
+ *   process(value);
+ * }
+ * // Now `values` can be iterated multiple times
+ * ```
+ *
+ * @example Multiple iterations (WRONG - throws error)
+ * ```typescript
+ * for await (const value of stream) { }
+ * for await (const value of stream) { } // Error!
+ * ```
  */
 
 export class AsyncStream<T> implements AsyncIterable<T>, AsyncIterator<T> {
@@ -27,11 +63,32 @@ export class AsyncStream<T> implements AsyncIterable<T>, AsyncIterator<T> {
     }
 
     /**
-     * 实现异步迭代器协议
+     * Returns true if the stream has been fully consumed (ISSUE-006)
+     * Useful for checking state before attempting iteration.
+     */
+    get isExhausted(): boolean {
+        return this.started && this.isDone && this.queue.length === 0;
+    }
+
+    /**
+     * Returns true if iteration has started (ISSUE-006)
+     */
+    get hasStarted(): boolean {
+        return this.started;
+    }
+
+    /**
+     * Implement async iterable protocol (ISSUE-006)
+     *
+     * @throws {Error} If stream has already been iterated
      */
     [Symbol.asyncIterator](): AsyncIterator<T> {
         if (this.started) {
-            throw new Error("Stream can only be iterated once");
+            throw new Error(
+                'AsyncStream can only be iterated once. ' +
+                'If you need to re-read values, collect them into an array during the first iteration: ' +
+                '`const values = []; for await (const v of stream) { values.push(v); }`'
+            );
         }
         this.started = true;
         return this;
