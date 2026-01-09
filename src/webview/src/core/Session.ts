@@ -139,7 +139,8 @@ export class Session {
     this.streamingController = new StreamingController();
     this.setupStreamingCallbacks();
 
-    effect(() => {
+    // ISSUE-004: Store effect cleanup for proper disposal
+    this.effectCleanup = effect(() => {
       this.selection(this.context.currentSelection());
     });
   }
@@ -434,14 +435,51 @@ export class Session {
     });
   }
 
+  /**
+   * Dispose session and clean up all resources (ISSUE-004 fix)
+   *
+   * IMPORTANT: Comprehensive cleanup to prevent memory leaks.
+   * Called when session is removed from SessionStore.
+   */
   dispose(): void {
-    // CLEANUP: Stop effect watchers
-    if (this.effectCleanup) {
-      this.effectCleanup();
+    // 1. Interrupt any active operation
+    if (this.claudeChannelId()) {
+      void this.interrupt().catch(() => {
+        // Ignore errors during disposal
+      });
     }
 
-    // CLEANUP: Dispose streaming controller
+    // 2. Clean up effect watchers
+    if (this.effectCleanup) {
+      this.effectCleanup();
+      this.effectCleanup = undefined;
+    }
+
+    // 3. Cancel pending connection
+    this.currentConnectionPromise = undefined;
+
+    // 4. Dispose streaming controller
     this.streamingController.dispose();
+
+    // 5. Clear all signals to release references
+    this.messages([]);
+    this.claudeChannelId(undefined);
+    this.error(undefined);
+    this.connection(undefined);
+    this.busy(false);
+    this.isLoading(false);
+    this.sessionId(undefined);
+    this.cwd(undefined);
+    this.summary(undefined);
+    this.modelSelection(undefined);
+    this.todos([]);
+    this.worktree(undefined);
+    this.selection(undefined);
+    this.usageData({
+      totalTokens: 0,
+      totalCost: 0,
+      contextWindow: 200000
+    });
   }
 
   /**
