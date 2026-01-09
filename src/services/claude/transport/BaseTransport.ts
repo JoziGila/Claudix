@@ -28,11 +28,12 @@ export interface ITransport {
     send(message: any): void;
 
     /**
-     * 监听来自客户端的消息
+     * 监听来自客户端的消息 (Fix #8: supports multiple callbacks)
      *
      * @param callback - 消息接收回调函数
+     * @returns 取消订阅函数
      */
-    onMessage(callback: (message: any) => void): void;
+    onMessage(callback: (message: any) => void): () => void;
 }
 
 /**
@@ -41,7 +42,8 @@ export interface ITransport {
  * 提供一些通用功能，具体实现可以继承此类
  */
 export abstract class BaseTransport implements ITransport {
-    protected messageCallback?: (message: any) => void;
+    // Fix #8: Support multiple callbacks with Set
+    protected messageCallbacks = new Set<(message: any) => void>();
 
     /**
      * 发送消息（由子类实现）
@@ -49,18 +51,27 @@ export abstract class BaseTransport implements ITransport {
     abstract send(message: any): void;
 
     /**
-     * 注册消息监听器
+     * 注册消息监听器 (Fix #8: supports multiple callbacks)
+     * @returns 取消订阅函数
      */
-    onMessage(callback: (message: any) => void): void {
-        this.messageCallback = callback;
+    onMessage(callback: (message: any) => void): () => void {
+        this.messageCallbacks.add(callback);
+        // Return unsubscribe function
+        return () => {
+            this.messageCallbacks.delete(callback);
+        };
     }
 
     /**
      * 触发消息回调（供子类调用）
      */
     protected triggerMessage(message: any): void {
-        if (this.messageCallback) {
-            this.messageCallback(message);
+        for (const callback of this.messageCallbacks) {
+            try {
+                callback(message);
+            } catch (error) {
+                console.error('[BaseTransport] Callback error:', error);
+            }
         }
     }
 }
