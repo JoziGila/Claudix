@@ -25,7 +25,7 @@ import { ITerminalService } from '../terminalService';
 import { ITabsAndEditorsService } from '../tabsAndEditorsService';
 import { IClaudeSdkService } from './ClaudeSdkService';
 import { IClaudeSessionService } from './ClaudeSessionService';
-import { AsyncStream, ITransport } from './transport';
+import { AsyncStream, ResilientMessageQueue, ITransport } from './transport';
 import { HandlerContext } from './handlers/types';
 import { IWebViewService } from '../webViewService';
 import { withTimeout, getTimeoutForRequest, TimeoutError } from '../../shared/timeout';
@@ -141,7 +141,7 @@ export interface IClaudeAgentService {
     /**
      * 关闭会话
      */
-    closeChannel(channelId: string, sendNotification: boolean, error?: string): void;
+    closeChannel(channelId: string, sendNotification: boolean, error?: string): Promise<void>;
 
     /**
      * 关闭所有会话
@@ -195,14 +195,17 @@ export class ClaudeAgentService implements IClaudeAgentService {
     // 会话管理
     private channels = new Map<string, Channel>();
 
-    // 接收来自客户端的消息流
-    private fromClientStream = new AsyncStream<WebViewToExtensionMessage>();
+    // 接收来自客户端的消息队列 (resilient - can recover from errors)
+    private messageQueue = new ResilientMessageQueue<WebViewToExtensionMessage>();
 
     // 等待响应的请求
     private outstandingRequests = new Map<string, RequestHandler>();
 
     // 取消控制器
     private abortControllers = new Map<string, AbortController>();
+
+    // Track active forwarding loops for cleanup (Fix #3)
+    private forwardingLoops = new Map<string, { promise: Promise<void>; abort: AbortController }>();
 
     // Handler 上下文（缓存）
     private handlerContext: HandlerContext;
@@ -266,61 +269,76 @@ export class ClaudeAgentService implements IClaudeAgentService {
      * 接收来自客户端的消息
      */
     async fromClient(message: WebViewToExtensionMessage): Promise<void> {
-        this.fromClientStream.enqueue(message);
+        this.messageQueue.enqueue(message);
     }
 
     /**
-     * 从客户端读取并分发消息
+     * 从客户端读取并分发消息 (resilient loop - continues on individual message errors)
      */
     private async readFromClient(): Promise<void> {
-        try {
-            for await (const message of this.fromClientStream) {
-                switch (message.type) {
-                    case "launch_claude":
-                        await this.launchClaude(
-                            message.channelId,
-                            message.resume || null,
-                            message.cwd || this.getCwd(),
-                            message.model || null,
-                            message.permissionMode || "default",
-                            message.thinkingLevel || null
-                        );
-                        break;
-
-                    case "close_channel":
-                        this.closeChannel(message.channelId, false);
-                        break;
-
-                    case "interrupt_claude":
-                        await this.interruptClaude(message.channelId);
-                        break;
-
-                    case "io_message":
-                        this.transportMessage(
-                            message.channelId,
-                            message.message,
-                            message.done
-                        );
-                        break;
-
-                    case "request":
-                        this.handleRequest(message);
-                        break;
-
-                    case "response":
-                        this.handleResponse(message);
-                        break;
-
-                    case "cancel_request":
-                        this.handleCancellation(message.targetRequestId);
-                        break;
-
-                    default:
-                        this.logService.error(`Unknown message type: ${(message as { type: string }).type}`);
+        while (true) {
+            try {
+                const message = await this.messageQueue.dequeue();
+                if (message === null) {
+                    // Queue closed - exit loop
+                    this.logService.info('[ClaudeAgentService] Message queue closed, stopping loop');
+                    break;
                 }
+
+                await this.processMessage(message);
+            } catch (error) {
+                // Log error but continue processing - don't break the loop
+                this.logService.error(`[ClaudeAgentService] Error processing message: ${error}`);
             }
-        } catch (error) {
-            this.logService.error(`[ClaudeAgentService] Error in readFromClient: ${error}`);
+        }
+    }
+
+    /**
+     * 处理单条消息
+     */
+    private async processMessage(message: WebViewToExtensionMessage): Promise<void> {
+        switch (message.type) {
+            case "launch_claude":
+                await this.launchClaude(
+                    message.channelId,
+                    message.resume || null,
+                    message.cwd || this.getCwd(),
+                    message.model || null,
+                    message.permissionMode || "default",
+                    message.thinkingLevel || null
+                );
+                break;
+
+            case "close_channel":
+                await this.closeChannel(message.channelId, false);
+                break;
+
+            case "interrupt_claude":
+                await this.interruptClaude(message.channelId);
+                break;
+
+            case "io_message":
+                this.transportMessage(
+                    message.channelId,
+                    message.message,
+                    message.done
+                );
+                break;
+
+            case "request":
+                this.handleRequest(message);
+                break;
+
+            case "response":
+                this.handleResponse(message);
+                break;
+
+            case "cancel_request":
+                this.handleCancellation(message.targetRequestId);
+                break;
+
+            default:
+                this.logService.error(`Unknown message type: ${(message as { type: string }).type}`);
         }
     }
 
@@ -400,38 +418,10 @@ export class ClaudeAgentService implements IClaudeAgentService {
             });
             this.logService.info(`  ✓ Channel 已注册，当前 ${this.channels.size} 个活跃会话`);
 
-            // 4. 启动监听任务：将 SDK 输出转发给客户端
+            // 4. 启动监听任务：将 SDK 输出转发给客户端 (tracked with AbortController)
             this.logService.info('');
             this.logService.info('📝 步骤 4: 启动消息转发循环');
-            (async () => {
-                try {
-                    this.logService.info(`  → 开始监听 Query 输出...`);
-                    let messageCount = 0;
-
-                    for await (const message of query) {
-                        messageCount++;
-                        this.logService.info(`  ← 收到消息 #${messageCount}: ${message.type}`);
-
-                        this.transport!.send({
-                            type: "io_message",
-                            channelId,
-                            message,
-                            done: false
-                        });
-                    }
-
-                    // 正常结束
-                    this.logService.info(`  ✓ Query 输出完成，共 ${messageCount} 条消息`);
-                    this.closeChannel(channelId, true);
-                } catch (error) {
-                    // 出错
-                    this.logService.error(`  ❌ Query 输出错误: ${error}`);
-                    if (error instanceof Error) {
-                        this.logService.error(`     Stack: ${error.stack}`);
-                    }
-                    this.closeChannel(channelId, true, String(error));
-                }
-            })();
+            this.startMessageForwarding(channelId, query);
 
             this.logService.info('');
             this.logService.info('✓ Claude 会话启动成功');
@@ -448,7 +438,7 @@ export class ClaudeAgentService implements IClaudeAgentService {
             this.logService.error('════════════════════════════════════════');
             this.logService.error('');
 
-            this.closeChannel(channelId, true, String(error));
+            await this.closeChannel(channelId, true, String(error));
             throw error;
         }
     }
@@ -472,12 +462,21 @@ export class ClaudeAgentService implements IClaudeAgentService {
     }
 
     /**
-     * 关闭会话
+     * 关闭会话 (Fix #5: async with proper cleanup)
      */
-    closeChannel(channelId: string, sendNotification: boolean, error?: string): void {
+    async closeChannel(channelId: string, sendNotification: boolean, error?: string): Promise<void> {
         this.logService.info(`[ClaudeAgentService] 关闭 Channel: ${channelId}`);
 
-        // 1. 发送关闭通知
+        // 1. Abort any active forwarding loop and wait for cleanup (Fix #3 + #5)
+        const forwardingLoop = this.forwardingLoops.get(channelId);
+        if (forwardingLoop) {
+            forwardingLoop.abort.abort();
+            // Wait for loop to finish cleanup
+            await forwardingLoop.promise.catch(() => {});
+            this.forwardingLoops.delete(channelId);
+        }
+
+        // 2. 发送关闭通知
         if (sendNotification && this.transport) {
             this.transport.send({
                 type: "close_channel",
@@ -486,12 +485,12 @@ export class ClaudeAgentService implements IClaudeAgentService {
             });
         }
 
-        // 2. 清理 channel
+        // 3. 清理 channel
         const channel = this.channels.get(channelId);
         if (channel) {
             channel.in.done();
             try {
-                channel.query.return?.();
+                await channel.query.return?.();
             } catch (e) {
                 this.logService.warn(`Error cleaning up channel: ${e}`);
             }
@@ -499,6 +498,78 @@ export class ClaudeAgentService implements IClaudeAgentService {
         }
 
         this.logService.info(`  ✓ Channel 已关闭，剩余 ${this.channels.size} 个活跃会话`);
+    }
+
+    /**
+     * Start message forwarding loop with tracking (Fix #3)
+     */
+    private startMessageForwarding(channelId: string, query: Query): void {
+        const abortController = new AbortController();
+
+        const forwardingPromise = this.runMessageForwardingLoop(
+            channelId,
+            query,
+            abortController.signal
+        );
+
+        this.forwardingLoops.set(channelId, {
+            promise: forwardingPromise,
+            abort: abortController
+        });
+
+        // Clean up when done
+        forwardingPromise.finally(() => {
+            this.forwardingLoops.delete(channelId);
+        });
+    }
+
+    /**
+     * Run the message forwarding loop (Fix #3)
+     */
+    private async runMessageForwardingLoop(
+        channelId: string,
+        query: Query,
+        signal: AbortSignal
+    ): Promise<void> {
+        let messageCount = 0;
+
+        try {
+            this.logService.info(`  → 开始监听 Query 输出...`);
+
+            for await (const message of query) {
+                if (signal.aborted) {
+                    this.logService.info(`  ⏹ 转发循环被中止: ${channelId}`);
+                    break;
+                }
+
+                messageCount++;
+                this.logService.info(`  ← 收到消息 #${messageCount}: ${message.type}`);
+
+                if (this.transport) {
+                    this.transport.send({
+                        type: "io_message",
+                        channelId,
+                        message,
+                        done: false
+                    });
+                }
+            }
+
+            // 正常结束
+            if (!signal.aborted) {
+                this.logService.info(`  ✓ Query 输出完成，共 ${messageCount} 条消息`);
+                await this.closeChannel(channelId, true);
+            }
+        } catch (error) {
+            // 出错
+            if (!signal.aborted) {
+                this.logService.error(`  ❌ Query 输出错误: ${error}`);
+                if (error instanceof Error) {
+                    this.logService.error(`     Stack: ${error.stack}`);
+                }
+                await this.closeChannel(channelId, true, String(error));
+            }
+        }
     }
 
     /**
@@ -588,14 +659,14 @@ export class ClaudeAgentService implements IClaudeAgentService {
 
         try {
             const response = await this.processRequest(message, abortController.signal);
-            this.transport!.send({
+            this.ensureTransport().send({
                 type: "response",
                 requestId: message.requestId,
                 response
             });
         } catch (error) {
             const errorMsg = error instanceof Error ? error.message : String(error);
-            this.transport!.send({
+            this.ensureTransport().send({
                 type: "response",
                 requestId: message.requestId,
                 response: {
@@ -790,7 +861,7 @@ export class ClaudeAgentService implements IClaudeAgentService {
             this.outstandingRequests.set(requestId, { resolve, reject });
 
             // 发送请求
-            this.transport!.send({
+            this.ensureTransport().send({
                 type: "request",
                 channelId,
                 requestId,
@@ -855,7 +926,7 @@ export class ClaudeAgentService implements IClaudeAgentService {
         await this.closeAllChannels();
 
         // 2. Stop message loop
-        this.fromClientStream.done();
+        this.messageQueue.close();
 
         // 3. Reject all outstanding requests
         for (const [requestId, handler] of this.outstandingRequests) {
@@ -877,6 +948,17 @@ export class ClaudeAgentService implements IClaudeAgentService {
     // ========================================================================
     // 工具方法
     // ========================================================================
+
+    /**
+     * Ensure transport is initialized (Fix #4)
+     * @throws Error if transport not set
+     */
+    private ensureTransport(): ITransport {
+        if (!this.transport) {
+            throw new Error('[ClaudeAgentService] Transport not initialized. Call setTransport() first.');
+        }
+        return this.transport;
+    }
 
     /**
      * 生成唯一 ID
