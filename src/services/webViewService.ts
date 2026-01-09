@@ -70,6 +70,10 @@ export class WebViewService implements IWebViewService {
 	private messageHandler?: (message: any) => void;
 	private readonly editorPanels = new Map<string, vscode.WebviewPanel>();
 
+	// Fix #7: Buffer messages when no webviews available
+	private pendingMessages: any[] = [];
+	private readonly MAX_PENDING_MESSAGES = 100;
+
 	constructor(
 		private readonly context: vscode.ExtensionContext,
 		@ILogService private readonly logService: ILogService
@@ -90,9 +94,12 @@ export class WebViewService implements IWebViewService {
 			page: 'chat'
 		});
 
-		// WebviewView 的销毁由 VSCode 管理，这里仅作日志记录
+		// Clean up webview references on dispose (matching editor panel pattern)
+		const webviewRef = webviewView.webview;
 		webviewView.onDidDispose(
 			() => {
+				this.webviews.delete(webviewRef);
+				this.webviewConfigs.delete(webviewRef);
 				this.logService.info('侧边栏 WebView 视图已销毁');
 			},
 			undefined,
@@ -114,13 +121,21 @@ export class WebViewService implements IWebViewService {
 	}
 
 	/**
-	 * 广播消息到所有已注册的 WebView
+	 * 广播消息到所有已注册的 WebView (Fix #7: with buffering)
 	 */
 	postMessage(message: any): void {
 		// 向所有 page === 'chat' 的 WebView 发送消息（包括侧边栏和编辑器面板）
 		// 每个 WebView 会根据 channelId 过滤自己需要的消息
-		if (this.webviews.size === 0) {
-			this.logService.warn('[WebViewService] 当前没有可用的 WebView 实例，消息将被丢弃');
+
+		// Fix #7: Buffer messages when no chat webviews available
+		const chatWebviews = this.getChatWebviews();
+		if (chatWebviews.length === 0) {
+			if (this.pendingMessages.length < this.MAX_PENDING_MESSAGES) {
+				this.pendingMessages.push(message);
+				this.logService.warn(`[WebViewService] 当前没有可用的 WebView 实例，消息已缓存 (${this.pendingMessages.length})`);
+			} else {
+				this.logService.error('[WebViewService] 消息缓存已满，丢弃消息');
+			}
 			return;
 		}
 
@@ -131,12 +146,7 @@ export class WebViewService implements IWebViewService {
 
 		const toRemove: vscode.Webview[] = [];
 
-		for (const webview of this.webviews) {
-			const config = this.webviewConfigs.get(webview);
-			if (!config || config.page !== 'chat') {
-				continue;
-			}
-
+		for (const webview of chatWebviews) {
 			try {
 				webview.postMessage(payload);
 			} catch (error) {
@@ -149,6 +159,20 @@ export class WebViewService implements IWebViewService {
 			this.webviews.delete(webview);
 			this.webviewConfigs.delete(webview);
 		}
+	}
+
+	/**
+	 * Get all chat webviews
+	 */
+	private getChatWebviews(): vscode.Webview[] {
+		const result: vscode.Webview[] = [];
+		for (const webview of this.webviews) {
+			const config = this.webviewConfigs.get(webview);
+			if (config?.page === 'chat') {
+				result.push(webview);
+			}
+		}
+		return result;
 	}
 
 	/**
@@ -264,6 +288,16 @@ export class WebViewService implements IWebViewService {
 
 		// 设置 WebView HTML（根据开发/生产模式切换）
 		webview.html = this.getHtmlForWebview(webview, bootstrap);
+
+		// Fix #7: Flush pending messages when chat webview connects
+		if (bootstrap.page === 'chat' && this.pendingMessages.length > 0) {
+			this.logService.info(`[WebViewService] 刷新 ${this.pendingMessages.length} 条缓存消息`);
+			const pending = this.pendingMessages;
+			this.pendingMessages = [];
+			for (const msg of pending) {
+				this.postMessage(msg);
+			}
+		}
 	}
 
 	/**
