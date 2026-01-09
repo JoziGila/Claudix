@@ -9,9 +9,9 @@
 |----------|-------|-------|------|-------------|
 | Critical | 4 | 4 | 0 | User-facing bugs, data loss, resource leaks |
 | High | 5 | 4 | 1 | Reliability issues, potential crashes |
-| Medium | 8 | 0 | 8 | Type safety, security, memory leaks |
+| Medium | 8 | 1 | 7 | Type safety, security, memory leaks |
 | Low | 5 | 0 | 5 | Code quality, consistency, visual |
-| **Total** | **22** | **8** | **14** | |
+| **Total** | **22** | **9** | **13** | |
 
 ## Issues by Severity
 
@@ -45,7 +45,7 @@
 | [013](013-effect-cleanup-not-set.md) | Effect Cleanup May Not Be Set | Potential Bug | Open |
 | [014](014-env-var-exposure.md) | Environment Variable Exposure | Security | Open |
 | [018](018-potential-performance-bottlenecks.md) | Potential Performance Bottlenecks | Performance | Open |
-| [020](020-no-connection-recovery.md) | No Connection Recovery / Retry Logic | Reliability | **NEW** |
+| [020](020-no-connection-recovery.md) | No Connection Recovery / Retry Logic | Reliability | **FIXED** |
 
 ### Low
 
