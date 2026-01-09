@@ -820,11 +820,38 @@ export class ClaudeAgentService implements IClaudeAgentService {
     }
 
     /**
-     * 关闭服务
+     * 关闭服务 (ISSUE-002)
+     *
+     * Clean up all resources:
+     * - Close all active channels
+     * - Stop message loop
+     * - Reject outstanding requests
+     * - Cancel pending operations
      */
     async shutdown(): Promise<void> {
+        this.logService.info('[ClaudeAgentService] Shutting down...');
+
+        // 1. Close all channels
         await this.closeAllChannels();
+
+        // 2. Stop message loop
         this.fromClientStream.done();
+
+        // 3. Reject all outstanding requests
+        for (const [requestId, handler] of this.outstandingRequests) {
+            handler.reject(new Error('Extension shutting down'));
+            this.logService.info(`[ClaudeAgentService] Rejected request: ${requestId}`);
+        }
+        this.outstandingRequests.clear();
+
+        // 4. Abort all pending operations
+        for (const [requestId, controller] of this.abortControllers) {
+            controller.abort();
+            this.logService.info(`[ClaudeAgentService] Aborted operation: ${requestId}`);
+        }
+        this.abortControllers.clear();
+
+        this.logService.info('[ClaudeAgentService] Shutdown complete');
     }
 
     // ========================================================================

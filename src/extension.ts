@@ -4,8 +4,12 @@
 
 import * as vscode from 'vscode';
 import { InstantiationServiceBuilder } from './di/instantiationServiceBuilder';
+import type { IInstantiationService } from './di/instantiation';
 import { registerServices, ILogService, IClaudeAgentService, IWebViewService } from './services/serviceRegistry';
 import { VSCodeTransport } from './services/claude/transport/VSCodeTransport';
+
+// Module-level reference for cleanup in deactivate() (ISSUE-002)
+let instantiationService: IInstantiationService | undefined;
 
 /**
  * Extension Activation
@@ -18,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerServices(builder, context);
 
 	// 3. Seal the builder and create DI container
-	const instantiationService = builder.seal();
+	instantiationService = builder.seal();
 
 	// 4. Log activation
 	instantiationService.invokeFunction(accessor => {
@@ -118,6 +122,22 @@ export function activate(context: vscode.ExtensionContext) {
 		logService.info('');
 	});
 
+	// 8. Register cleanup on subscriptions (ISSUE-002)
+	context.subscriptions.push({
+		dispose: () => {
+			if (instantiationService) {
+				try {
+					instantiationService.invokeFunction(accessor => {
+						const logService = accessor.get(ILogService);
+						logService.info('[Extension] Disposing via subscriptions...');
+					});
+				} catch {
+					// Ignore errors during disposal logging
+				}
+			}
+		}
+	});
+
 	// Return extension API (if needed to expose to other extensions)
 	return {
 		getInstantiationService: () => instantiationService
@@ -125,8 +145,38 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
- * Extension Deactivation
+ * Extension Deactivation (ISSUE-002)
+ *
+ * Clean up all resources when extension is deactivated:
+ * - Close all Claude channels
+ * - Stop message loop
+ * - Clear outstanding requests
  */
-export function deactivate() {
-	// Clean up resources
+export function deactivate(): Thenable<void> | undefined {
+	if (!instantiationService) {
+		return undefined;
+	}
+
+	return instantiationService.invokeFunction(async accessor => {
+		try {
+			const logService = accessor.get(ILogService);
+			const agentService = accessor.get(IClaudeAgentService);
+
+			logService.info('');
+			logService.info('╔════════════════════════════════════════╗');
+			logService.info('║         Extension Deactivating          ║');
+			logService.info('╚════════════════════════════════════════╝');
+
+			// Shutdown agent service (closes channels, stops message loop)
+			await agentService.shutdown();
+
+			logService.info('✓ Claude Agent Service shut down');
+			logService.info('✓ Extension deactivated successfully');
+			logService.info('');
+		} catch (error) {
+			console.error('[Extension] Error during deactivation:', error);
+		} finally {
+			instantiationService = undefined;
+		}
+	});
 }
