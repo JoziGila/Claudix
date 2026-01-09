@@ -46,7 +46,7 @@
 | [014](014-env-var-exposure.md) | Environment Variable Exposure | Security | Open |
 | [018](018-potential-performance-bottlenecks.md) | Potential Performance Bottlenecks | Performance | Open |
 | [020](020-no-connection-recovery.md) | No Connection Recovery / Retry Logic | Reliability | **FIXED** |
-| [022](022-completion-system-performance.md) | Completion System Performance and Accuracy | Performance/UX | **NEW** |
+| [022](022-completion-system-performance.md) | Completion System Performance and Accuracy | Performance/UX | Partial |
 
 ### Low
 
