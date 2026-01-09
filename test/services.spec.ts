@@ -3,17 +3,30 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { InstantiationService } from '../src/di/instantiationService';
-import { ServiceCollection } from '../src/di/serviceCollection';
+import * as vscode from 'vscode';
+import { InstantiationServiceBuilder } from '../src/di/instantiationServiceBuilder';
 import { registerServices } from '../src/services/serviceRegistry';
-import { ILogService } from '../src/services/log/logService';
+import { ILogService } from '../src/services/logService';
+
+// Mock extension context
+const mockContext = {
+	extensionMode: vscode.ExtensionMode.Test,
+	subscriptions: [],
+	extensionPath: '/mock/path',
+	extensionUri: { fsPath: '/mock/path' } as any,
+	globalState: { get: () => undefined, update: () => Promise.resolve() } as any,
+	workspaceState: { get: () => undefined, update: () => Promise.resolve() } as any,
+	storagePath: '/mock/storage',
+	globalStoragePath: '/mock/global-storage',
+	logPath: '/mock/logs',
+} as unknown as vscode.ExtensionContext;
 
 describe('Services', () => {
 	it('should register and retrieve log service', () => {
-		const services = new ServiceCollection();
-		registerServices(services, true);
+		const builder = new InstantiationServiceBuilder();
+		registerServices(builder, mockContext);
 
-		const instantiationService = new InstantiationService(services);
+		const instantiationService = builder.seal();
 
 		instantiationService.invokeFunction(accessor => {
 			const logService = accessor.get(ILogService);

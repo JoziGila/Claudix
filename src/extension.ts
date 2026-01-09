@@ -62,7 +62,7 @@ export function activate(context: vscode.ExtensionContext) {
 		});
 
 		// Create VSCode Transport
-		const transport = instantiationService.createInstance(VSCodeTransport);
+		const transport = instantiationService!.createInstance(VSCodeTransport);
 
 		// Set transport on Claude Agent Service
 		claudeAgentService.setTransport(transport);
@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(webviewProvider);
 		context.subscriptions.push(
 			vscode.commands.registerCommand('claudix.openSettings', async () => {
-				await instantiationService.invokeFunction(accessorInner => {
+				await instantiationService!.invokeFunction(accessorInner => {
 					const webViewServiceInner = accessorInner.get(IWebViewService);
 					const logServiceInner = accessorInner.get(ILogService);
 					try {
@@ -89,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 		context.subscriptions.push(
 			vscode.commands.registerCommand('claudix.openChatInEditor', () => {
-				instantiationService.invokeFunction(accessorInner => {
+				instantiationService!.invokeFunction(accessorInner => {
 					const webViewServiceInner = accessorInner.get(IWebViewService);
 					const logServiceInner = accessorInner.get(ILogService);
 					try {

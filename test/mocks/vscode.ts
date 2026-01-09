@@ -2,6 +2,12 @@
  * VSCode API Mock for testing
  */
 
+export enum ExtensionMode {
+	Production = 1,
+	Development = 2,
+	Test = 3
+}
+
 export const window = {
 	createOutputChannel: (name: string) => ({
 		appendLine: (text: string) => console.log(text),
