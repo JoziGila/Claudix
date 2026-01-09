@@ -16,17 +16,17 @@
     </template>
 
     <template #expandable>
-      <!-- 文件内容视图 -->
+      <!-- File content view -->
       <div v-if="content && !toolResult?.is_error" class="write-view">
-        <!-- 文件标题栏 -->
+        <!-- File header bar -->
         <div v-if="filePath" class="write-file-header">
           <FileIcon :file-name="filePath" :size="16" class="file-icon" />
           <span class="file-name">{{ fileName }}</span>
         </div>
 
-        <!-- 内容显示 -->
+        <!-- Content display -->
         <div class="write-scroll-container">
-          <!-- 左侧行号列 -->
+          <!-- Left side line number column -->
           <div ref="lineNumbersRef" class="write-line-numbers">
             <div
               v-for="n in lineCount"
@@ -37,14 +37,14 @@
             </div>
           </div>
 
-          <!-- 右侧内容列 -->
+          <!-- Right side content column -->
           <div ref="contentRef" class="write-content" @scroll="handleContentScroll">
             <pre class="content-text">{{ content }}</pre>
           </div>
         </div>
       </div>
 
-      <!-- 错误内容 -->
+      <!-- Error content -->
       <ToolError :tool-result="toolResult" />
     </template>
   </ToolMessageWrapper>
@@ -68,7 +68,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// vcc-re 数据获取方式：只从 inputs 获取
+// Data retrieval method: only get from inputs
 const filePath = computed(() => {
   return props.toolUse?.input?.file_path || '';
 });
@@ -78,12 +78,12 @@ const fileName = computed(() => {
   return path.basename(filePath.value);
 });
 
-// 从 inputs.content 获取文件内容
+// Get file content from inputs.content
 const content = computed(() => {
   return props.toolUse?.input?.content || '';
 });
 
-// 内容统计
+// Content statistics
 const contentStats = computed(() => {
   if (!content.value) return null;
 
@@ -93,33 +93,33 @@ const contentStats = computed(() => {
   return { lines, chars };
 });
 
-// 行数
+// Line count
 const lineCount = computed(() => {
   if (!content.value) return 0;
   return content.value.split('\n').length;
 });
 
-// 是否有内容视图
+// Whether there is content view
 const hasContentView = computed(() => {
   return !!content.value && !props.toolResult?.is_error;
 });
 
-// 判断是否为权限请求阶段
+// Check if in permission request phase
 const isPermissionRequest = computed(() => {
-  // 没有 result 或 result 不是错误 = 权限请求或执行中
+  // No result or result is not error = permission request or executing
   return !props.toolResult || !props.toolResult.is_error;
 });
 
-// 权限请求阶段展开
+// Expand during permission request phase
 const shouldExpand = computed(() => {
   return hasContentView.value && isPermissionRequest.value;
 });
 
-// DOM 引用
+// DOM references
 const lineNumbersRef = ref<HTMLElement>();
 const contentRef = ref<HTMLElement>();
 
-// 同步行号列和内容列的垂直滚动
+// Sync vertical scrolling between line number column and content column
 function handleContentScroll() {
   if (lineNumbersRef.value && contentRef.value) {
     lineNumbersRef.value.scrollTop = contentRef.value.scrollTop;
@@ -128,7 +128,7 @@ function handleContentScroll() {
 </script>
 
 <style scoped>
-/* 有内容视图时移除左侧边框和边距，error 保留默认样式 */
+/* When content view is present, remove left border and margin; error keeps default styles */
 .has-content-view :deep(.expandable-content) {
   border-left: none;
   padding: 0;
@@ -193,7 +193,7 @@ function handleContentScroll() {
   background-color: var(--vscode-editor-background);
 }
 
-/* 左侧行号列 */
+/* Left side line number column */
 .write-line-numbers {
   width: 50px;
   flex-shrink: 0;
@@ -213,14 +213,14 @@ function handleContentScroll() {
   user-select: none;
 }
 
-/* 右侧内容列 */
+/* Right side content column */
 .write-content {
   flex: 1;
   overflow: auto;
   position: relative;
 }
 
-/* Monaco 风格滚动条(仅应用于内容列) */
+/* Monaco-style scrollbar (only applied to content column) */
 .write-content::-webkit-scrollbar {
   width: 14px;
   height: 14px;

@@ -16,7 +16,7 @@ defineProps<Props>();
 </script>
 
 <style scoped>
-/* 对齐 Claudex SystemMessage 样式 */
+/* Align with Claudex SystemMessage styles */
 .interrupt-block {
   display: flex;
   align-items: center;

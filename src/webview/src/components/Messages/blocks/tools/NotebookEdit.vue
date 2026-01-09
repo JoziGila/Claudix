@@ -23,7 +23,7 @@
         <pre class="source-content">{{ newSource }}</pre>
       </div>
 
-      <!-- 错误内容 -->
+      <!-- Error content -->
       <ToolError :tool-result="toolResult" />
     </template>
   </ToolMessageWrapper>
@@ -45,7 +45,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Notebook路径
+// Notebook path
 const notebookPath = computed(() => {
   return props.toolUse?.input?.notebook_path || props.toolUseResult?.notebook_path;
 });
@@ -65,19 +65,19 @@ const newSource = computed(() => {
   return props.toolUse?.input?.new_source || props.toolUseResult?.new_source;
 });
 
-// 判断是否为权限请求阶段
+// Check if in permission request phase
 const isPermissionRequest = computed(() => {
   const hasToolUseResult = !!props.toolUseResult;
   const hasToolResult = !!props.toolResult && !props.toolResult.is_error;
   return !hasToolUseResult && !hasToolResult;
 });
 
-// 权限请求阶段默认展开,执行完成后不展开
+// Expand by default during permission request phase, not after execution completes
 const shouldExpand = computed(() => {
-  // 权限请求阶段展开
+  // Expand during permission request phase
   if (isPermissionRequest.value) return true;
 
-  // 有错误时展开
+  // Expand when there is an error
   if (props.toolResult?.is_error) return true;
 
   return false;

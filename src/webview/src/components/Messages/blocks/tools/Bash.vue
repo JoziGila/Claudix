@@ -11,18 +11,18 @@
     </template>
 
     <template #expandable>
-      <!-- 命令内容 -->
+      <!-- Command content -->
       <div class="bash-command">
         <pre class="command-content">{{ command }}</pre>
       </div>
 
-      <!-- 输出内容 (如果有) -->
+      <!-- Output content (if any) -->
       <div v-if="hasOutput" class="bash-output">
         <div class="output-header">Output</div>
         <pre class="output-content">{{ outputContent }}</pre>
       </div>
 
-      <!-- 错误内容 -->
+      <!-- Error content -->
       <ToolError :tool-result="toolResult" />
     </template>
   </ToolMessageWrapper>
@@ -54,7 +54,7 @@ const runInBackground = computed(() => {
 });
 
 const outputContent = computed(() => {
-  // 从 toolResult.content 获取输出
+  // Get output from toolResult.content
   if (typeof props.toolResult?.content === 'string') {
     return props.toolResult.content;
   }
@@ -65,7 +65,7 @@ const hasOutput = computed(() => {
   return outputContent.value && !props.toolResult?.is_error;
 });
 
-// 默认展开条件: 有输出或有错误
+// Default expand condition: has output or has error
 const shouldExpand = computed(() => {
   return hasOutput.value || !!props.toolResult?.is_error;
 });

@@ -15,7 +15,7 @@
       />
     </template>
 
-    <!-- 动态展开内容：仅在有错误时显示 -->
+    <!-- Dynamic expandable content: only show when there is an error -->
     <template v-if="toolResult?.is_error" #expandable>
       <ToolError :tool-result="toolResult" />
     </template>
@@ -50,7 +50,7 @@ const limit = computed(() => {
   return props.toolUse?.input?.limit;
 });
 
-// 计算起始行号和结束行号（用于文件跳转和框选）
+// Calculate start and end line numbers (for file navigation and selection)
 const startLine = computed(() => {
   return offset.value !== undefined ? offset.value + 1 : 1;
 });

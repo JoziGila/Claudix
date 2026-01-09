@@ -14,13 +14,13 @@
     </template>
 
     <template #expandable>
-      <!-- 成功消息 -->
+      <!-- Success message -->
       <div v-if="message && !toolResult?.is_error" class="success-message">
         <span class="codicon codicon-info"></span>
         <span class="message-text">{{ message }}</span>
       </div>
 
-      <!-- 错误内容 -->
+      <!-- Error content -->
       <ToolError :tool-result="toolResult" />
     </template>
   </ToolMessageWrapper>
@@ -44,12 +44,12 @@ const shellId = computed(() => {
 });
 
 const message = computed(() => {
-  // 优先使用 toolUseResult (会话加载时)
+  // Prefer toolUseResult (when loading session)
   if (props.toolUseResult?.message) {
     return props.toolUseResult.message;
   }
 
-  // 实时对话: 从 toolResult.content 解析
+  // Real-time conversation: parse from toolResult.content
   if (typeof props.toolResult?.content === 'string') {
     try {
       const data = JSON.parse(props.toolResult.content);
@@ -66,7 +66,7 @@ const isSuccess = computed(() => {
   return !!message.value && !props.toolResult?.is_error;
 });
 
-// 默认展开条件: 有错误时展开
+// Default expand condition: expand when there is an error
 const shouldExpand = computed(() => {
   return !!props.toolResult?.is_error;
 });

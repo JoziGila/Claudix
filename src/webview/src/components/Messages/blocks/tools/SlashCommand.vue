@@ -26,13 +26,13 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// 命令内容
+// Command content
 const command = computed(() => {
-  // toolUseResult 可能是字符串或对象，优先使用 toolUse.input
+  // toolUseResult may be a string or object, prefer toolUse.input
   if (props.toolUse?.input?.command) {
     return props.toolUse.input.command;
   }
-  // toolUseResult 如果是对象才取 command 属性
+  // Only get command property if toolUseResult is an object
   if (props.toolUseResult && typeof props.toolUseResult === 'object' && props.toolUseResult.command) {
     return props.toolUseResult.command;
   }

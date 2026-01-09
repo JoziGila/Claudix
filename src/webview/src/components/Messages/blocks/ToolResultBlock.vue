@@ -1,5 +1,5 @@
 <template>
-  <!-- ToolResult 不单独渲染，它会被关联到对应的 ToolUse 中显示 -->
+  <!-- ToolResult is not rendered independently; it is displayed within the associated ToolUse -->
   <div class="tool-result-standalone">
     <div class="tool-result-label">Tool Result (orphaned)</div>
     <pre class="tool-result-content">{{ formattedContent }}</pre>

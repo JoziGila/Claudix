@@ -70,7 +70,7 @@ const props = defineProps<Props>();
 const isExpanded = ref(true);
 
 const todos = computed(() => {
-  // 从 toolUse.input.todos 获取 todo 列表
+  // Get todo list from toolUse.input.todos
   return props.toolUse?.input?.todos || [];
 });
 
@@ -201,7 +201,7 @@ function getStatusClass(status: string): string {
   gap: 8px;
 }
 
-/* 使用全局样式 .todo-item-icon-container, .todo-item-indicator, .todo-in-progress-circle */
+/* Use global styles .todo-item-icon-container, .todo-item-indicator, .todo-in-progress-circle */
 
 /* Todo content */
 .todo-content {

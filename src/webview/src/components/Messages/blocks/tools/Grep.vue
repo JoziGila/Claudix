@@ -9,61 +9,61 @@
       <code v-if="pattern" class="pattern-text">{{ pattern }}</code>
     </template>
 
-    <!-- 展开内容：显示搜索选项和结果 -->
+    <!-- Expandable content: show search options and results -->
     <template #expandable>
-      <!-- 搜索选项 -->
+      <!-- Search options -->
       <div v-if="hasSearchOptions" class="options-section">
         <div class="options-grid">
           <div v-if="searchPath" class="option-item">
             <span class="codicon codicon-folder"></span>
-            <span class="option-text">路径: {{ searchPath }}</span>
+            <span class="option-text">Path: {{ searchPath }}</span>
           </div>
           <div v-if="glob" class="option-item">
             <span class="codicon codicon-filter"></span>
-            <span class="option-text">过滤: {{ glob }}</span>
+            <span class="option-text">Filter: {{ glob }}</span>
           </div>
           <div v-if="fileType" class="option-item">
             <span class="codicon codicon-file-code"></span>
-            <span class="option-text">类型: {{ fileType }}</span>
+            <span class="option-text">Type: {{ fileType }}</span>
           </div>
           <div v-if="outputMode" class="option-item">
             <span class="codicon codicon-output"></span>
-            <span class="option-text">模式: {{ outputMode }}</span>
+            <span class="option-text">Mode: {{ outputMode }}</span>
           </div>
         </div>
       </div>
 
-      <!-- 搜索标志 -->
+      <!-- Search flags -->
       <div v-if="hasFlags" class="flags-section">
-        <div class="detail-label">标志:</div>
+        <div class="detail-label">Flags:</div>
         <div class="flags-list">
           <span v-if="caseInsensitive" class="flag-tag">
             <span class="codicon codicon-case-sensitive"></span>
-            忽略大小写
+            Case insensitive
           </span>
           <span v-if="multiline" class="flag-tag">
             <span class="codicon codicon-whole-word"></span>
-            多行模式
+            Multiline mode
           </span>
           <span v-if="showLineNumbers" class="flag-tag">
             <span class="codicon codicon-list-ordered"></span>
-            显示行号
+            Show line numbers
           </span>
           <span v-if="contextLines" class="flag-tag">
             <span class="codicon codicon-list-tree"></span>
-            上下文: {{ contextLines }} 行
+            Context: {{ contextLines }} lines
           </span>
           <span v-if="headLimit" class="flag-tag">
             <span class="codicon codicon-arrow-up"></span>
-            限制: {{ headLimit }} 条
+            Limit: {{ headLimit }}
           </span>
         </div>
       </div>
 
-      <!-- 搜索结果 -->
+      <!-- Search results -->
       <div v-if="resultFiles.length > 0" class="results-section">
         <div class="detail-label">
-          <span>找到 {{ fileCount }} 个文件:</span>
+          <span>Found {{ fileCount }} files:</span>
         </div>
         <div class="file-list">
           <ToolFilePath
@@ -76,7 +76,7 @@
         </div>
       </div>
 
-      <!-- 错误内容 -->
+      <!-- Error content -->
       <ToolError :tool-result="toolResult" />
     </template>
   </ToolMessageWrapper>
@@ -98,16 +98,16 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// 搜索模式
+// Search pattern
 const pattern = computed(() => props.toolUse?.input?.pattern);
 
-// 搜索选项
+// Search options
 const searchPath = computed(() => props.toolUse?.input?.path);
 const glob = computed(() => props.toolUse?.input?.glob);
 const fileType = computed(() => props.toolUse?.input?.type);
 const outputMode = computed(() => props.toolUse?.input?.output_mode);
 
-// 搜索标志
+// Search flags
 const caseInsensitive = computed(() => props.toolUse?.input?.['-i']);
 const multiline = computed(() => props.toolUse?.input?.multiline);
 const showLineNumbers = computed(() => props.toolUse?.input?.['-n']);
@@ -116,7 +116,7 @@ const contextLines = computed(() => {
 });
 const headLimit = computed(() => props.toolUse?.input?.head_limit);
 
-// 判断是否有选项或标志
+// Determine if there are options or flags
 const hasSearchOptions = computed(() => {
   return searchPath.value || glob.value || fileType.value || outputMode.value;
 });
@@ -125,16 +125,16 @@ const hasFlags = computed(() => {
   return caseInsensitive.value || multiline.value || showLineNumbers.value || contextLines.value || headLimit.value;
 });
 
-// 解析搜索结果
+// Parse search results
 const resultFiles = computed(() => {
   if (!props.toolResult?.content) return [];
 
   const content = props.toolResult.content;
 
-  // 如果是字符串，解析文件列表
+  // If it's a string, parse file list
   if (typeof content === 'string') {
     const lines = content.split('\n').filter(line => line.trim());
-    // 过滤掉 "Found X files" 这样的统计行
+    // Filter out statistics lines like "Found X files"
     return lines.filter(line => !line.match(/^Found \d+ files?$/i));
   }
 
