@@ -327,6 +327,15 @@
     priority: 100,
   });
 
+  // Register shortcut: escape → stop conversation (when busy)
+  useKeybinding({
+    keys: 'escape',
+    handler: handleStop,
+    allowInEditable: true,
+    when: () => isBusy.value,
+    priority: 200,
+  });
+
   async function handleModelSelect(modelId: string) {
     const s = session.value;
     if (!s) return;
